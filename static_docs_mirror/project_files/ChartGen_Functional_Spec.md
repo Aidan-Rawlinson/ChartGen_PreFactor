@@ -34,13 +34,13 @@ The Streamlit UI provides access to all workflow stages. Tab names follow a dual
 
 ### 3.1 Sidebar File Operations
 
-File operations sit in the sidebar, independent of the active tab; with no project open, tabs remain visible but empty. New Project, Open Project, Save, Save As, Save and Close, and Close Without Saving cover the full lifecycle. New Project triggers the New Project flow (Section 4); Save As prompts for a save location; Open Project and Close prompt to save first if the current project is dirty.
+File operations sit in the sidebar, independent of the active tab; with no workfile open, tabs remain visible but empty. New Workfile, Open Workfile, Save, Save As, Save and Close, and Close Without Saving cover the full lifecycle. New Workfile triggers the New Workfile flow (Section 4); Save As prompts for a save location; Open Workfile and Close prompt to save first if the current workfile is dirty.
 
 ### 3.2 Tab Structure
 
 | Tab (short) | Tab (full) | Purpose |
 |-------------|------------|---------|
-| **Details** | Project Details | Read-only view of project identity, time period, and file paths, including the project folder ChartGen uses to create the outputs subfolder. |
+| **Details** | Project Details | Read-only view of project identity, time period, and file paths, including the workfile folder ChartGen uses to create the outputs subfolder. |
 | **Config** | User Controlled Configuration Files | Empty shell — intended for management of reference CSVs and other runtime configuration files; not yet implemented. |
 | **Imports** | Import Project Data | Template upload and processing (Template Reader); toolkit API fetch. |
 | **Select** | Selection & Populations | Select an individual reporting unit and inspect its details, hierarchies, and peer group assignments. |
@@ -48,21 +48,20 @@ File operations sit in the sidebar, independent of the active tab; with no proje
 | **Running Order** | Running Order (Output Script) | The master output script. Generated automatically from template processing. |
 | **Charts** | Chart Preview | Preview any chart from fetched data; test chart types and data shape pairings. |
 | **Batches** | Batch Processing | Run and monitor report generation. Preflight checks for template, Running Order, and unassigned chart types. Execution log per row. |
-| **Debug** | Debug Trace | Dev-facing structured trace log for a single report run — function-by-function with parameters and outcomes. |
 
 Tabs in scope for the final tool but not yet implemented are included as empty shells.
 
 ---
 
-## 4. New Project Flow
+## 4. New Workfile Flow
 
-Creating a new project is one step: year and project selection, a native folder picker for the save location, and the initial submissions fetch — producing a saved `.cgp` ready for further work.
+Creating a new workfile is one step: year and project selection, a native folder picker for the save location, and the initial submissions fetch — producing a saved `.cgw` ready for further work.
 
 ---
 
 ## 5. Concurrency
 
-Locking is advisory only. Each open project writes a lock recording who holds it and when. A second user opening that project sees a warning naming the holder and can proceed anyway — last-write-wins if both save. A crash leaves the lock stale until the next person sees the same warning.
+Locking is advisory only. Each open workfile writes a lock recording who holds it and when. A second user opening that workfile sees a warning naming the holder and can proceed anyway — last-write-wins if both save. A crash leaves the lock stale until the next person sees the same warning.
 
 ---
 
@@ -105,7 +104,7 @@ After reading, the Template Reader strips all detected yellow textboxes from the
 
 ### 6.5 Template Validation
 
-At run time, ChartGen compares the ordered list of slide layout names between the `.cgp`'s reference copy of the cleaned template and the live copy alongside the project file. Matching lists proceed silently. A mismatch raises a warning naming which slides changed and how — soft, not blocking; the user can proceed or reprocess the template. Layout names are compared rather than slide count, since this catches slides added, removed, reordered, or reassigned to a different layout — all of which shift placeholder positions in the Running Order — while staying silent on cosmetic in-slide edits.
+At run time, ChartGen compares the ordered list of slide layout names between the `.cgw`'s reference copy of the cleaned template and the live copy alongside the workfile. Matching lists proceed silently. A mismatch raises a warning naming which slides changed and how — soft, not blocking; the user can proceed or reprocess the template. Layout names are compared rather than slide count, since this catches slides added, removed, reordered, or reassigned to a different layout — all of which shift placeholder positions in the Running Order — while staying silent on cosmetic in-slide edits.
 
 ---
 
@@ -130,7 +129,7 @@ Additional columns define peer group membership. Two column types are supported:
 - **`Name()` columns** — multi-value peer groups, e.g. `Region()` — the unit belongs to the named group its value states. These are resolved automatically from the organisations reference data at setup time and appear in the Running Order populations multi-select.
 - **Flag columns** — binary 1/0, e.g. `Shelford Group` — unit is or is not a member. Resolution in `build_population_shapes` is not yet implemented.
 
-`Region()` is the first peer group column, resolved from `GET /organisations?year={year}` during the New Project flow (Section 4) and written permanently into `submissions.csv` at save time. Additional `Name()` columns can be added to `submissions.csv` and will be picked up automatically by `build_population_shapes` and the Running Order dialog without code changes.
+`Region()` is the first peer group column, resolved from `GET /organisations?year={year}` during the New Workfile flow (Section 4) and written permanently into `submissions.csv` at save time. Additional `Name()` columns can be added to `submissions.csv` and will be picked up automatically by `build_population_shapes` and the Running Order dialog without code changes.
 
 The CSV is human-readable, editable in Excel, and uploadable via the Streamlit UI.
 
@@ -184,14 +183,14 @@ Outputs are generated by processing the functions on the Running Order.
 
 Generated Running Orders follow a standard structure: any `open_excel` rows (scope `batch_open`) first; then `create_ppt`, `set_default_populations` (defaulting to `All^Selected`), and `update_text`; one row per placeholder, resolved by yellow-box classification (`insert_chart`, `insert_picture`, `insert_from_excel`, or `empty_placeholder`); then `save_ppt` and `save_pdf` (disabled); and finally any `close_excel` rows (scope `batch_close`).
 
-An `.xlsx` version can be generated by the system as a human-editing format for the Running Order — created on demand for download and parsed back in on upload. It is never written to disk on its own and never persisted inside the `.cgp` itself. Dropdown validation constrains `function`, `enabled`, and `chart_type_ref` (per-row, filtered to valid chart types for the assigned cache file's data shape) on each export. It is editable directly in Excel and uploadable/downloadable via the Streamlit Running Order tab.
+An `.xlsx` version can be generated by the system as a human-editing format for the Running Order — created on demand for download and parsed back in on upload. It is never written to disk on its own and never persisted inside the `.cgw` itself. Dropdown validation constrains `function`, `enabled`, and `chart_type_ref` (per-row, filtered to valid chart types for the assigned cache file's data shape) on each export. It is editable directly in Excel and uploadable/downloadable via the Streamlit Running Order tab.
 
 ### 9.2 Running Order Functions (Current Scope)
 
 | Function | Description |
 |----------|-------------|
 | `create_ppt` | Opens the cleaned template; sets the output path. Always the first per-report row. |
-| `set_default_populations` | Sets the project-default populations string, applied to any `insert_chart` row without a per-row override. |
+| `set_default_populations` | Sets the workfile-default populations string, applied to any `insert_chart` row without a per-row override. |
 | `insert_chart` | Renders a Base Chart from cached data; inserts at the named placeholder position. Position and size come from the Running Order row, populated automatically from the template. |
 | `empty_placeholder` | No-op. Placeholder has no content assigned. Explicit so every placeholder is accounted for. |
 | `save_ppt` | Saves the completed output as `.pptx`. |
@@ -242,7 +241,7 @@ The system supports three canonical data shapes — NumericSeries, NumericCompos
 
 Charts do not receive a single data shape. They receive an ordered list of `PopulationShape` objects, one per population token in the populations string. Each `PopulationShape` contains a filtered copy of the data shape with stats recalculated against that population only.
 
-**The populations string** (e.g. `All^Region()^Selected`) is specified on the Running Order — either as a project default via `set_default_populations`, or overridden per chart row in the `populations` column. It is authored as a `^`-delimited ordered list of tokens and edited via a multi-select in the Running Order dialog.
+**The populations string** (e.g. `All^Region()^Selected`) is specified on the Running Order — either as a workfile default via `set_default_populations`, or overridden per chart row in the `populations` column. It is authored as a `^`-delimited ordered list of tokens and edited via a multi-select in the Running Order dialog.
 
 **Resolution — sequential intersection model:** `build_population_shapes` in the Assembly Engine processes each token as an intersecting filter on the running set of submission_ids:
 
@@ -298,4 +297,3 @@ The presentation is walked per report at generation time: every text frame is ch
 ## 13. Batch Processing
 
 **Run Selected** executes the Running Order once, against the currently selected reporting unit. **Run Batch** executes the Running Order once for each of the next N reporting units in the queue, starting from the batch cursor. **Run All** executes the Running Order once for every reporting unit in the population. The batch loop's role is limited to iteration; report construction itself is the Assembly Engine's responsibility (Section 9).
-

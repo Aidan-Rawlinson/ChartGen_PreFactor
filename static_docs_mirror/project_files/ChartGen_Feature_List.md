@@ -4,7 +4,7 @@
 
 **Readiness** — Complete (confirmed built and working) · Partial (implemented but with a known gap, noted below) · Not built (no implementation yet)
 
-Structured in pipeline order: application/session foundations, then project setup, data acquisition, template and report definition, content construction, execution, and output.
+Structured in pipeline order: application/session foundations, then workfile setup, data acquisition, template and report definition, content construction, execution, and output.
 
 ---
 
@@ -15,19 +15,19 @@ Structured in pipeline order: application/session foundations, then project setu
 | Feature | Readiness | Notes |
 |---|---|---|
 | Login validates against API before proceeding | Complete | |
-| Multiple database support | Not built | Different TBN databases require different credentials. Not every TBN project is on a different database, so this is a database-level gap, not a project-level one. |
+| Multiple database support | Not built | Different TBN databases require different credentials. Not every TBN project is on a different database, so this is a database-level gap, not a workfile-level one. |
 
 ---
 
-## Project / file structure
+## Workfile / file structure
 
 | Feature | Readiness | Notes |
 |---|---|---|
 | `.bat` launcher | Complete | |
-| Project file format (`.cgp`) | Complete | See Architecture document. |
-| Concurrency via `project_info.json` lock fields | Partial | See Architecture Decisions 4–5. Further development to be undertaken to optimise approach. |
+| Workfile file format (`.cgw`) | Complete | See Architecture document. |
+| Concurrency via `workfile_info.json` lock fields | Partial | See Architecture Decisions 4–5. Further development to be undertaken to optimise approach. |
 | Sidebar file operations (New, Open, Save, Save As, Save and Close, Close Without Saving) | Complete | See Architecture Decision 6. |
-| Outputs folder structure (`outputs/pptx/`, `outputs/pdf/`) | Complete | Auto-created alongside the project file on first run. |
+| Outputs folder structure (`outputs/pptx/`, `outputs/pdf/`) | Complete | Auto-created alongside the workfile on first run. |
 | SharePoint/OneDrive compatibility | Complete | See Architecture Decision 8. |
 
 ---
@@ -36,23 +36,23 @@ Structured in pipeline order: application/session foundations, then project setu
 
 | Feature | Readiness | Notes |
 |---|---|---|
-| Single open project (`.cgp`) at a time | Complete | |
-| `.cgp` file type | Complete | ChartGen creates, reads, and writes `.cgp` files correctly. |
-| File association (double-click a `.cgp` file to open ChartGen) | Not built | Requires an installer; no installer exists. |
-| Custom icon for `.cgp` files | Not built | Requires an installer; no installer exists. |
+| Single open workfile (`.cgw`) at a time | Complete | |
+| `.cgw` file type | Complete | ChartGen creates, reads, and writes `.cgw` files correctly. |
+| File association (double-click a `.cgw` file to open ChartGen) | Not built | Requires an installer; no installer exists. |
+| Custom icon for `.cgw` files | Not built | Requires an installer; no installer exists. |
 
 ---
 
-# Part 2 — Project Setup
+# Part 2 — Workfile Setup
 
-## Project setup
+## Workfile setup
 
 | Feature | Readiness | Notes |
 |---|---|---|
-| New Project flow (year → project → save location) | Complete | See Functional Spec Section 4. |
+| New Workfile flow (year → project → save location) | Complete | See Functional Spec Section 4. |
 | Year selectbox | Complete | |
 | Project dropdown (API-populated, cached per year) | Complete | |
-| Submissions fetch at project creation | Complete | An invalid year/project combination blocks creation. |
+| Submissions fetch at workfile creation | Complete | An invalid year/project combination blocks creation. |
 | Details tab (read-only project settings) | Complete | |
 
 ---
@@ -81,9 +81,9 @@ Structured in pipeline order: application/session foundations, then project setu
 
 | Feature | Readiness | Notes |
 |---|---|---|
-| Reporting units + identifiers | Complete | Fetched from API at project setup; stored as `submissions.csv`. |
+| Reporting units + identifiers | Complete | Fetched from API at workfile setup; stored as `submissions.csv`. |
 | Organisation reference data (`organisations.csv`) | Complete | Fetched from `GET /organisations?year={year}`; used to resolve peer group columns at save time. |
-| Peer group assignments — `Region()` | Complete | Resolved at project creation, written permanently into `submissions.csv`. |
+| Peer group assignments — `Region()` | Complete | Resolved at workfile creation, written permanently into `submissions.csv`. |
 | Additional peer group columns (`Name()`) | Partial | Empty-bracket tokens (`Region()`) fully supported end-to-end: column discovery, Running Order multi-select, and resolution to the selected unit's own group. Explicit-value tokens (`Region(Wales)`) are not implemented — silently skipped at resolution. |
 | Binary peer group columns (flag columns) | Not built | Resolution logic for `1`/`0` membership columns not yet implemented in `build_population_shapes`. |
 | Multi-level hierarchy model | Not built | Current model uses a single flat comparator population. |
@@ -101,7 +101,7 @@ Structured in pipeline order: application/session foundations, then project setu
 | Yellow textbox convention (URL / picture / Excel) | Complete | Yellow boxes are classified by content: toolkit URL (chart), image path (picture), or Excel path with driver/export ranges. |
 | Cleaned template production | Complete | |
 | Cleaned template as user-owned asset | Complete | Two edit tiers: cosmetic edits picked up silently on next run; structural edits require re-upload, which regenerates the Running Order. See Architecture Decision 2. |
-| Template validation on run (slide layout comparison) | Complete | Compares slide layout names between the `.cgp` reference copy and the live template; warns on mismatch, doesn't block. See Architecture Decision 3. |
+| Template validation on run (slide layout comparison) | Complete | Compares slide layout names between the `.cgw` reference copy and the live template; warns on mismatch, doesn't block. See Architecture Decision 3. |
 | User template creation (self-service placeholder positioning) | Not built | |
 
 ---

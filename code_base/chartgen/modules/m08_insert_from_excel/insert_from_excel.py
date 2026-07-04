@@ -245,14 +245,14 @@ def insert_from_excel(ctx, row: dict, settings: dict) -> dict:
     except Exception as e:
         import traceback
         detail = f"insert_from_excel: workbook calculation failed\nType: {type(e).__name__}\nRepr: {e!r}\n\n{traceback.format_exc()}"
-        # Write to log file alongside the project folder for inspection
+        # Write to log file alongside the workfile folder for inspection
         try:
-            log_path = os.path.join(settings.get("project_folder", "."), "chartgen_error.log")
+            log_path = os.path.join(settings.get("workfile_folder", "."), "chartgen_error.log")
             with open(log_path, "w", encoding="utf-8") as f:
                 f.write(detail)
         except Exception:
             pass
-        return _err(row, f"insert_from_excel: workbook calculation failed — see chartgen_error.log in project folder")
+        return _err(row, f"insert_from_excel: workbook calculation failed — see chartgen_error.log in workfile folder")
 
     # --- Capture export range as image ---
     try:

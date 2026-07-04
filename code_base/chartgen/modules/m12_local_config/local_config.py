@@ -4,8 +4,8 @@ M12 — Local Config: per-machine, per-user configuration and runtime context.
 
 Owns two distinct concerns:
   1. Local user config — credentials and anything else that is per-user /
-     per-machine rather than per-project. This data must NOT live in the
-     project file (which is shareable) or in static config. Credentials
+     per-machine rather than per-workfile. This data must NOT live in the
+     workfile (which is shareable) or in static config. Credentials
      storage here is a temporary arrangement pending a full credentials
      model redesign.
 
@@ -80,7 +80,7 @@ def build_report_context(settings: dict, submissions: list) -> Optional[ReportCo
 import csv as _csv_mod
 
 # ---------------------------------------------------------------------------
-# Credentials — stored locally, never in the project file
+# Credentials — stored locally, never in the workfile
 # ---------------------------------------------------------------------------
 
 _CREDENTIALS_PATH = os.path.join(os.path.dirname(__file__), "credentials.csv")

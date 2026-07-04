@@ -35,8 +35,6 @@ from PIL import Image as PILImage
 from modules.m05_chart_engine.cache_reader import load_shape
 from modules.m05_chart_engine.base_charts import render_chart
 from modules.m12_local_config.local_config import ReportContext, build_report_context
-from modules.m10_project_config.submissions import load_submissions
-from modules.m10_project_config.settings import load_settings
 from modules.m04_data_shapes.shapes import PopulationShape, filter_shape
 from modules.m07_insert_picture.insert_picture import insert_picture
 from modules.m08_insert_from_excel.insert_from_excel import (
@@ -245,15 +243,15 @@ def insert_chart(ctx: AssemblyContext, row: dict, settings: dict) -> dict:
 
     # --- Load data shape ---
     try:
-        data_shape, shape_type = _load_chart_data(cache_file, settings.get("project_state"))
+        data_shape, shape_type = _load_chart_data(cache_file, settings.get("workfile_state"))
     except Exception as e:
         return _err(row, f"insert_chart: failed to load cache '{cache_file}': {e}")
 
     # --- Build population shapes ---
     population_shapes = []
     if render_context is not None and populations_str:
-        _ps = settings.get("project_state")
-        submissions = _ps.submissions if _ps is not None else load_submissions()
+        workfile_state = settings.get("workfile_state")
+        submissions = workfile_state.submissions
         try:
             population_shapes = build_population_shapes(
                 data_shape, populations_str, submissions, render_context
@@ -445,8 +443,10 @@ def run_running_order(rows: list[dict], settings: dict,
     settings dict must contain at minimum:
       ppt_template_path      path to the original template
       cleaned_template_path  path to the cleaned template (yellow boxes removed)
-      project_folder         root folder; outputs/ subfolder is created here
+      workfile_folder        root folder; outputs/ subfolder is created here
       reporting_unit_name    used to name the output file
+      workfile_state         the open WorkfileState — submissions and cache are
+                              always read from here, never from disk
 
     ctx: optional existing AssemblyContext — pass a shared context from the
          Batch Controller so that batch_open state (e.g. open Excel workbooks)
@@ -469,8 +469,8 @@ def run_running_order(rows: list[dict], settings: dict,
 
     # Build ReportContext from the passed-in settings (which carry per-unit overrides
     # during batch runs) rather than re-reading from disk.
-    _ps_settings = settings.get("project_state")
-    submissions = _ps_settings.submissions if _ps_settings is not None else load_submissions()
+    workfile_state = settings.get("workfile_state")
+    submissions = workfile_state.submissions
     ctx.report_context = build_report_context(settings, submissions)
 
     t_start = time.perf_counter()
@@ -520,9 +520,9 @@ def run_running_order(rows: list[dict], settings: dict,
 # Private helpers — internal to insert_chart sub-steps
 # ---------------------------------------------------------------------------
 
-def _load_chart_data(cache_file: str, project_state=None):
+def _load_chart_data(cache_file: str, workfile_state=None):
     """Load a canonical data shape from the cache. Sub-step of insert_chart."""
-    return load_shape(cache_file, project_state)
+    return load_shape(cache_file, workfile_state)
 
 
 def _render_chart_image(chart_type_ref: str, population_shapes: list, width_emu: int, height_emu: int,
@@ -571,8 +571,8 @@ def _insert_image_at_position(prs: Presentation, slide_index: int,
 def _ensure_output_folder(settings: dict) -> str:
     output_folder = settings.get("outputs_folder", "").strip()
     if not output_folder:
-        project_folder = settings.get("project_folder", "").strip()
-        output_folder = os.path.join(project_folder, "outputs") if project_folder else "outputs"
+        workfile_folder = settings.get("workfile_folder", "").strip()
+        output_folder = os.path.join(workfile_folder, "outputs") if workfile_folder else "outputs"
     os.makedirs(output_folder, exist_ok=True)
     return output_folder
 

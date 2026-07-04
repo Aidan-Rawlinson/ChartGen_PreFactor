@@ -1,21 +1,21 @@
 """
-project_file.py
-M14 — Project File: .cgp file format and ProjectState management.
+workfile_file.py
+M14 — Workfile File: .cgw file format and WorkfileState management.
 
-Owns everything to do with the .cgp ZIP archive:
-  - ProjectState dataclass — in-memory representation of all project data
-  - open_project   — read .cgp into ProjectState
-  - save_project   — serialise ProjectState back to .cgp
-  - new_project    — create a blank ProjectState
-  - close_project  — clear lock fields and discard state
+Owns everything to do with the .cgw ZIP archive:
+  - WorkfileState dataclass — in-memory representation of all workfile data
+  - open_workfile   — read .cgw into WorkfileState
+  - save_workfile   — serialise WorkfileState back to .cgw
+  - new_workfile    — create a blank WorkfileState
+  - close_workfile  — clear lock fields and discard state
 
 No other module touches the ZIP directly. Everything else in the codebase
-receives a ProjectState and works against it.
+receives a WorkfileState and works against it.
 
 Lock mechanism:
-  project_info.json inside the .cgp carries locked_by / locked_at fields.
+  workfile_info.json inside the .cgw carries locked_by / locked_at fields.
   These are written on open (after login) and cleared on close.
-  A second user opening a locked project sees an advisory warning before
+  A second user opening a locked workfile sees an advisory warning before
   proceeding to login. The lock is advisory — stale locks from crashes are
   handled by the warning prompt, not by a hard block.
 """
@@ -34,16 +34,16 @@ CHARTGEN_VERSION = "0.1-prototype"
 
 
 @dataclass
-class ProjectState:
+class WorkfileState:
     """
-    In-memory representation of everything inside a .cgp file.
+    In-memory representation of everything inside a .cgw file.
     Loaded from ZIP at open; serialised back to ZIP on save.
     """
     # File identity
-    cgp_path: str = ""                  # absolute path to .cgp on disk
-    project_name: str = ""
+    workfile_path: str = ""             # absolute path to .cgw on disk
+    workfile_name: str = ""             # used as the file name (without .cgw)
 
-    # project_config/
+    # workfile_config/
     settings: dict = field(default_factory=dict)
     urls: list = field(default_factory=list)          # list of {url, label}
     submissions: list = field(default_factory=list)   # list of dicts
@@ -57,7 +57,7 @@ class ProjectState:
     # template/
     template_pptx_bytes: Optional[bytes] = None       # reference copy bytes
 
-    # project_info.json
+    # workfile_info.json
     last_saved_by: str = ""
     last_saved_at: str = ""
     locked_by: str = ""
@@ -123,18 +123,18 @@ def _url_list_to_csv(urls: list) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Read project_info.json from ZIP without full extraction
+# Read workfile_info.json from ZIP without full extraction
 # ---------------------------------------------------------------------------
 
-def read_project_info(cgp_path: str) -> dict:
+def read_workfile_info(workfile_path: str) -> dict:
     """
-    Read project_info.json from a .cgp without loading the full archive.
+    Read workfile_info.json from a .cgw without loading the full archive.
     Returns empty dict if file does not exist or cannot be read.
     """
     try:
-        with zipfile.ZipFile(cgp_path, "r") as zf:
-            if "project_info.json" in zf.namelist():
-                return json.loads(zf.read("project_info.json").decode("utf-8"))
+        with zipfile.ZipFile(workfile_path, "r") as zf:
+            if "workfile_info.json" in zf.namelist():
+                return json.loads(zf.read("workfile_info.json").decode("utf-8"))
     except Exception:
         pass
     return {}
@@ -144,14 +144,14 @@ def read_project_info(cgp_path: str) -> dict:
 # Open
 # ---------------------------------------------------------------------------
 
-def open_project(cgp_path: str) -> ProjectState:
+def open_workfile(workfile_path: str) -> WorkfileState:
     """
-    Load a .cgp into a ProjectState.
+    Load a .cgw into a WorkfileState.
     Does NOT write lock fields — caller writes lock after successful login.
     """
-    state = ProjectState(cgp_path=cgp_path)
+    state = WorkfileState(workfile_path=workfile_path)
 
-    with zipfile.ZipFile(cgp_path, "r") as zf:
+    with zipfile.ZipFile(workfile_path, "r") as zf:
         names = zf.namelist()
 
         def _read(name):
@@ -160,12 +160,12 @@ def open_project(cgp_path: str) -> ProjectState:
         def _read_bytes(name):
             return zf.read(name) if name in names else None
 
-        # project_config/
-        state.settings         = _key_value_csv_to_dict(_read("project_config/settings.csv"))
-        state.urls             = _url_csv_to_list(_read("project_config/urls.csv"))
-        state.submissions      = _csv_to_rows(_read("project_config/submissions.csv"))
-        state.organisations    = _csv_to_rows(_read("project_config/organisations.csv"))
-        state.running_order_rows = _csv_to_rows(_read("project_config/running_order.csv"))
+        # workfile_config/
+        state.settings         = _key_value_csv_to_dict(_read("workfile_config/settings.csv"))
+        state.urls             = _url_csv_to_list(_read("workfile_config/urls.csv"))
+        state.submissions      = _csv_to_rows(_read("workfile_config/submissions.csv"))
+        state.organisations    = _csv_to_rows(_read("workfile_config/organisations.csv"))
+        state.running_order_rows = _csv_to_rows(_read("workfile_config/running_order.csv"))
         for _row in state.running_order_rows:
             _row["enabled"] = 1 if str(_row.get("enabled", "1")).strip() in ("1", "True", "true", "yes") else 0
 
@@ -183,10 +183,10 @@ def open_project(cgp_path: str) -> ProjectState:
                 state.template_pptx_bytes = _read_bytes(name)
                 break
 
-        # project_info.json
-        if "project_info.json" in names:
-            info = json.loads(zf.read("project_info.json").decode("utf-8"))
-            state.project_name   = info.get("project_name", "")
+        # workfile_info.json
+        if "workfile_info.json" in names:
+            info = json.loads(zf.read("workfile_info.json").decode("utf-8"))
+            state.workfile_name  = info.get("workfile_name", "")
             state.last_saved_by  = info.get("last_saved_by", "")
             state.last_saved_at  = info.get("last_saved_at", "")
             state.locked_by      = info.get("locked_by", "")
@@ -196,50 +196,50 @@ def open_project(cgp_path: str) -> ProjectState:
     return state
 
 
-def write_lock(cgp_path: str, username: str):
+def write_lock(workfile_path: str, username: str):
     """
-    Write locked_by / locked_at into project_info.json inside the .cgp.
+    Write locked_by / locked_at into workfile_info.json inside the .cgw.
     Called after successful login.
     """
-    _update_project_info(cgp_path, {
+    _update_workfile_info(workfile_path, {
         "locked_by": username,
         "locked_at": datetime.now(timezone.utc).isoformat(),
     })
 
 
-def clear_lock(cgp_path: str):
+def clear_lock(workfile_path: str):
     """
-    Clear locked_by / locked_at from project_info.json inside the .cgp.
+    Clear locked_by / locked_at from workfile_info.json inside the .cgw.
     Called on any close route.
     """
-    _update_project_info(cgp_path, {
+    _update_workfile_info(workfile_path, {
         "locked_by": "",
         "locked_at": "",
     })
 
 
-def _update_project_info(cgp_path: str, updates: dict):
+def _update_workfile_info(workfile_path: str, updates: dict):
     """
-    Read project_info.json from .cgp, apply updates, write back.
+    Read workfile_info.json from .cgw, apply updates, write back.
     Uses a full rewrite of the ZIP to update the uncompressed entry cleanly.
     """
     try:
-        info = read_project_info(cgp_path)
+        info = read_workfile_info(workfile_path)
         info.update(updates)
-        _rewrite_single_file(cgp_path, "project_info.json",
+        _rewrite_single_file(workfile_path, "workfile_info.json",
                              json.dumps(info, indent=2).encode("utf-8"),
                              compress_type=zipfile.ZIP_STORED)
     except Exception:
         pass
 
 
-def _rewrite_single_file(cgp_path: str, arcname: str, data: bytes, compress_type=zipfile.ZIP_DEFLATED):
+def _rewrite_single_file(workfile_path: str, arcname: str, data: bytes, compress_type=zipfile.ZIP_DEFLATED):
     """
     Replace a single file inside a ZIP by rewriting the full archive.
     This avoids duplicate entries that zipfile append mode creates.
     """
     buf = io.BytesIO()
-    with zipfile.ZipFile(cgp_path, "r") as zin:
+    with zipfile.ZipFile(workfile_path, "r") as zin:
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:
             for item in zin.infolist():
                 if item.filename == arcname:
@@ -252,7 +252,7 @@ def _rewrite_single_file(cgp_path: str, arcname: str, data: bytes, compress_type
                 info = zipfile.ZipInfo(arcname)
                 info.compress_type = compress_type
                 zout.writestr(info, data)
-    with open(cgp_path, "wb") as f:
+    with open(workfile_path, "wb") as f:
         f.write(buf.getvalue())
 
 
@@ -260,16 +260,17 @@ def _rewrite_single_file(cgp_path: str, arcname: str, data: bytes, compress_type
 # Save
 # ---------------------------------------------------------------------------
 
-def save_project(state: ProjectState, username: str, target_path: str = None):
+def save_workfile(state: WorkfileState, username: str, target_path: str = None):
     """
-    Serialise ProjectState back to the .cgp ZIP.
+    Serialise WorkfileState back to the .cgw ZIP.
     Updates last_saved_by / last_saved_at. Does not touch lock fields.
 
-    target_path: write to this path instead of state.cgp_path, and update
-    state.cgp_path to match (used by Save As). Defaults to state.cgp_path.
+    target_path: write to this path instead of state.workfile_path, and update
+    state.workfile_path to match (used by Save As). Defaults to state.workfile_path.
     """
-    from modules.m10_project_config.submissions import FIELDNAMES as SUB_FIELDS
-    from modules.m10_project_config.organisations import FIELDNAMES as ORG_FIELDS
+    from modules.constants_temp.constants_temp import (
+        SUBMISSIONS_FIELDNAMES as SUB_FIELDS, ORGANISATIONS_FIELDNAMES as ORG_FIELDS
+    )
 
     now = datetime.now(timezone.utc).isoformat()
     state.last_saved_by = username
@@ -281,21 +282,21 @@ def save_project(state: ProjectState, username: str, target_path: str = None):
         def _write(arcname, text):
             zf.writestr(arcname, text.encode("utf-8"))
 
-        # project_config/
-        _write("project_config/settings.csv",      _dict_to_key_value_csv(state.settings))
-        _write("project_config/urls.csv",           _url_list_to_csv(state.urls))
-        _write("project_config/submissions.csv",
+        # workfile_config/
+        _write("workfile_config/settings.csv",      _dict_to_key_value_csv(state.settings))
+        _write("workfile_config/urls.csv",           _url_list_to_csv(state.urls))
+        _write("workfile_config/submissions.csv",
                _rows_to_csv(state.submissions, SUB_FIELDS) if state.submissions else "")
-        _write("project_config/organisations.csv",
+        _write("workfile_config/organisations.csv",
                _rows_to_csv(state.organisations, ORG_FIELDS) if state.organisations else "")
 
         # running_order — derive fieldnames from rows if present
         if state.running_order_rows:
             from modules.m03_running_order.running_order import COLUMNS
-            _write("project_config/running_order.csv",
+            _write("workfile_config/running_order.csv",
                    _rows_to_csv(state.running_order_rows, COLUMNS))
         else:
-            _write("project_config/running_order.csv", "")
+            _write("workfile_config/running_order.csv", "")
 
         # data_cache/
         _write("data_cache/manifest.json", json.dumps(state.manifest, indent=2))
@@ -304,27 +305,27 @@ def save_project(state: ProjectState, username: str, target_path: str = None):
 
         # template/
         if state.template_pptx_bytes:
-            project_name = state.project_name or "template"
-            zf.writestr(f"template/{project_name}.pptx", state.template_pptx_bytes)
+            workfile_name = state.workfile_name or "template"
+            zf.writestr(f"template/{workfile_name}.pptx", state.template_pptx_bytes)
 
-        # project_info.json — uncompressed
+        # workfile_info.json — uncompressed
         info = {
-            "project_name":      state.project_name,
+            "workfile_name":     state.workfile_name,
             "last_saved_by":     state.last_saved_by,
             "last_saved_at":     state.last_saved_at,
             "chartgen_version":  CHARTGEN_VERSION,
             "locked_by":         state.locked_by,
             "locked_at":         state.locked_at,
         }
-        zi = zipfile.ZipInfo("project_info.json")
+        zi = zipfile.ZipInfo("workfile_info.json")
         zi.compress_type = zipfile.ZIP_STORED
         zf.writestr(zi, json.dumps(info, indent=2).encode("utf-8"))
 
-    save_path = target_path or state.cgp_path
+    save_path = target_path or state.workfile_path
     with open(save_path, "wb") as f:
         f.write(buf.getvalue())
 
-    state.cgp_path = save_path
+    state.workfile_path = save_path
     state.dirty = False
 
 
@@ -332,49 +333,49 @@ def save_project(state: ProjectState, username: str, target_path: str = None):
 # New
 # ---------------------------------------------------------------------------
 
-def new_project(cgp_path: str, project_name: str) -> ProjectState:
+def new_workfile(workfile_path: str, workfile_name: str) -> WorkfileState:
     """
-    Create a blank ProjectState and write an empty .cgp to disk.
+    Create a blank WorkfileState and write an empty .cgw to disk.
     Caller populates settings / submissions / etc. before first save.
     """
-    state = ProjectState(
-        cgp_path=cgp_path,
-        project_name=project_name,
+    state = WorkfileState(
+        workfile_path=workfile_path,
+        workfile_name=workfile_name,
         dirty=True,
     )
-    # Write a minimal .cgp immediately so the file exists on disk
-    _write_empty_cgp(cgp_path, project_name)
+    # Write a minimal .cgw immediately so the file exists on disk
+    _write_empty_cgw(workfile_path, workfile_name)
     return state
 
 
-def _write_empty_cgp(cgp_path: str, project_name: str):
-    os.makedirs(os.path.dirname(cgp_path), exist_ok=True) if os.path.dirname(cgp_path) else None
+def _write_empty_cgw(workfile_path: str, workfile_name: str):
+    os.makedirs(os.path.dirname(workfile_path), exist_ok=True) if os.path.dirname(workfile_path) else None
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for name in [
-            "project_config/settings.csv",
-            "project_config/urls.csv",
-            "project_config/submissions.csv",
-            "project_config/organisations.csv",
-            "project_config/running_order.csv",
+            "workfile_config/settings.csv",
+            "workfile_config/urls.csv",
+            "workfile_config/submissions.csv",
+            "workfile_config/organisations.csv",
+            "workfile_config/running_order.csv",
             "data_cache/manifest.json",
         ]:
             zf.writestr(name, b"")
         # empty manifest
         zf.writestr("data_cache/manifest.json", json.dumps({}).encode("utf-8"))
-        # project_info
+        # workfile_info
         info = {
-            "project_name":     project_name,
+            "workfile_name":    workfile_name,
             "last_saved_by":    "",
             "last_saved_at":    "",
             "chartgen_version": CHARTGEN_VERSION,
             "locked_by":        "",
             "locked_at":        "",
         }
-        zi = zipfile.ZipInfo("project_info.json")
+        zi = zipfile.ZipInfo("workfile_info.json")
         zi.compress_type = zipfile.ZIP_STORED
         zf.writestr(zi, json.dumps(info, indent=2).encode("utf-8"))
-    with open(cgp_path, "wb") as f:
+    with open(workfile_path, "wb") as f:
         f.write(buf.getvalue())
 
 
@@ -382,10 +383,10 @@ def _write_empty_cgp(cgp_path: str, project_name: str):
 # Close
 # ---------------------------------------------------------------------------
 
-def close_project(state: ProjectState):
+def close_workfile(state: WorkfileState):
     """
-    Clear lock fields in the .cgp and discard the ProjectState.
+    Clear lock fields in the .cgw and discard the WorkfileState.
     Called on both Save and Close and Close Without Saving routes.
     """
-    if state.cgp_path and os.path.exists(state.cgp_path):
-        clear_lock(state.cgp_path)
+    if state.workfile_path and os.path.exists(state.workfile_path):
+        clear_lock(state.workfile_path)

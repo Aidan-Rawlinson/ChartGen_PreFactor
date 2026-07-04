@@ -3,12 +3,10 @@ cache_reader.py
 Loads a canonical data shape from the data cache by filename.
 Deserialises the JSON back into the appropriate dataclass instance.
 
-Works against ProjectState.cache when available, or falls back to
-reading from m11_data_cache/ on disk.
+Works against WorkfileState.cache — the sole live store for cached chart data.
 """
 
 import json
-import os
 
 from modules.m04_data_shapes.shapes import (
     NumericSeries, NumericSeriesUnit, NumericSeriesMetricStats, ShapeStats,
@@ -17,8 +15,6 @@ from modules.m04_data_shapes.shapes import (
     CategoricalCompositional, CategoricalCompositionalMetric,
     CategoricalCompositionalUnit, CategoricalCompositionalMetricStats,
 )
-
-CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "m11_data_cache")
 
 
 def _from_dict_numeric_series(d):
@@ -115,43 +111,20 @@ def _deserialise(json_str: str):
     return DESERIALISE_MAP[shape_type](data), shape_type
 
 
-def load_shape(filename, project_state=None):
+def load_shape(filename, workfile_state):
     """
-    Load a cached data shape by filename (e.g. '88141_0_0.json').
-    Uses ProjectState.cache if provided, otherwise reads from disk.
+    Load a cached data shape by filename (e.g. '88141_0_0.json') from
+    WorkfileState.cache.
     Returns (shape_instance, shape_type_string).
     """
-    if project_state is not None and filename in project_state.cache:
-        return _deserialise(project_state.cache[filename])
-
-    path = os.path.join(CACHE_DIR, filename)
-    with open(path, "r", encoding="utf-8") as f:
-        return _deserialise(f.read())
+    return _deserialise(workfile_state.cache[filename])
 
 
-def list_cached_files(project_state=None):
-    """Return sorted list of cache filenames (excluding manifest)."""
-    if project_state is not None:
-        return sorted(project_state.cache.keys())
-
-    files = [
-        f for f in os.listdir(CACHE_DIR)
-        if f.endswith(".json") and f != "manifest.json"
-    ]
-    return sorted(files)
+def list_cached_files(workfile_state):
+    """Return sorted list of cache filenames (excluding manifest), from WorkfileState.cache."""
+    return sorted(workfile_state.cache.keys())
 
 
-def load_manifest(project_state=None):
-    """
-    Return manifest dict keyed by filename.
-    Uses ProjectState.manifest if provided, otherwise reads from disk.
-    """
-    if project_state is not None:
-        return {v["filename"]: v for v in project_state.manifest.values()}
-
-    path = os.path.join(CACHE_DIR, "manifest.json")
-    if not os.path.exists(path):
-        return {}
-    with open(path, "r", encoding="utf-8") as f:
-        entries = json.load(f)
-    return {v["filename"]: v for v in entries.values()}
+def load_manifest(workfile_state):
+    """Return manifest dict keyed by filename, from WorkfileState.manifest."""
+    return {v["filename"]: v for v in workfile_state.manifest.values()}

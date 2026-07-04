@@ -25,17 +25,15 @@ chartgen/
     ├── m07_insert_picture/
     ├── m08_insert_from_excel/
     ├── m09_static_config/
-    ├── m10_project_config/
-    ├── m11_data_cache/
     ├── m12_local_config/
-    └── m14_project_file/
+    └── m14_workfile_file/
 
-Project Domain (.cgp)
-MyProject.cgp  (ZIP)
-├── project_config/
+Workfile Domain (.cgw)
+MyWorkfile.cgw  (ZIP)
+├── workfile_config/
 ├── data_cache/
 ├── template/
-└── project_info.json
+└── workfile_info.json
 ```
 
 ---
@@ -76,11 +74,11 @@ MyProject.cgp  (ZIP)
 
 ### Cluster 4 — File & session structure
 
-- **`.cgp`** — ChartGen Project file. A ZIP archive containing all of one project's saved state. See the Architecture document, Section 4, for full internal structure.
+- **`.cgw`** — ChartGen Workfile file. A ZIP archive containing all of one workfile's saved state. See the Architecture document, Section 4, for full internal structure.
 
-- **Data Cache** — the physical, on-disk store of fetched chart data: `data_cache/manifest.json` and one JSON file per chart shape dataset, inside the `.cgp`. Constitutes the data side of the Project domain when the file is closed. Mirrored in memory by `ProjectState.cache`/`.manifest` while the project is open.
+- **Data Cache** — the physical, on-disk store of fetched chart data: `data_cache/manifest.json` and one JSON file per chart shape dataset, inside the `.cgw`. Constitutes the data side of the Workfile domain when the file is closed. Mirrored in memory by `WorkfileState.cache`/`.manifest` while the workfile is open.
 
-- **ProjectState** — the in-memory Python object holding the complete working state of an open `.cgp`. The sole interface other modules use to read or write project data during a session. See the Architecture document, Section 5.
+- **WorkfileState** — the in-memory Python object holding the complete working state of an open `.cgw`. The sole interface other modules use to read or write workfile data during a session. See the Architecture document, Section 5.
 
 ### Cluster 5 — Template & placeholders
 

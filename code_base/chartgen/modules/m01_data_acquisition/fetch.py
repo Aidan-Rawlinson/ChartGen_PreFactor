@@ -2,29 +2,26 @@
 fetch.py
 Orchestrates the full data acquisition process.
 
-For each URL in urls.csv:
+For each URL in WorkfileState.urls:
   1. Parse the URL into components
   2. API call 1: get tier info (reportId, year, serviceItemId)
   3. API call 2: get chart data (raw JSON)
   4. Transform raw JSON into a canonical data shape
-  5. Save normalised shape to m11_data_cache
+  5. Save normalised shape into WorkfileState.cache
 
 Called once before a batch run. Not called during batch processing.
 """
 
 import os
-from .url_parser import load_urls, parse_url
+from .url_parser import parse_url
 from .api_client import get_tier_info, get_chart_data
 from .transformers import transform
 from .cache_writer import save_chart
 
-PROJECT_CONFIG_DIR = os.path.join(os.path.dirname(__file__), "..", "m10_project_config")
-URLS_PATH = os.path.join(PROJECT_CONFIG_DIR, "urls.csv")
 
-
-def fetch_all(token: str, on_progress=None, project_state=None) -> list[dict]:
+def fetch_all(token: str, *, workfile_state, on_progress=None) -> list[dict]:
     """
-    Fetch, transform, and cache data for all URLs in the project config.
+    Fetch, transform, and cache data for all URLs in WorkfileState.urls.
 
     token: session token from st.session_state, obtained at login.
     on_progress: optional callback(current, total, label) for UI progress updates.
@@ -39,10 +36,7 @@ def fetch_all(token: str, on_progress=None, project_state=None) -> list[dict]:
         "shape_type": str | None,
     }
     """
-    if project_state is not None:
-        urls = [parse_url(u["url"], u.get("label", "")) for u in project_state.urls if u.get("url")]
-    else:
-        urls = load_urls(URLS_PATH)
+    urls = [parse_url(u["url"], u.get("label", "")) for u in workfile_state.urls if u.get("url")]
     results = []
     total = len(urls)
 
@@ -82,7 +76,7 @@ def fetch_all(token: str, on_progress=None, project_state=None) -> list[dict]:
             shape_type = type(shape).__name__
 
             # Save normalised shape to cache
-            filepath = save_chart(tier_id, group, option, label, shape, shape_type, url=parsed["url"], project_state=project_state)
+            filepath = save_chart(tier_id, group, option, label, shape, shape_type, url=parsed["url"], workfile_state=workfile_state)
 
             results.append({
                 "tier_id":    tier_id,

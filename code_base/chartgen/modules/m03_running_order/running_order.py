@@ -3,41 +3,19 @@ running_order.py
 M03 — Running Order
 
 Manages the Running Order as a list of row dicts (the canonical store lives
-in ProjectState.running_order_rows, persisted as running_order.csv inside
-the .cgp). The .xlsx is a transient human-editing format only — generated
+in WorkfileState.running_order_rows, persisted as running_order.csv inside
+the .cgw). The .xlsx is a transient human-editing format only — generated
 on demand for download, parsed on upload, never persisted to disk:
   - Generates a skeleton from a TemplateReadResult (one row per placeholder)
   - Writes/reads rows to/from an .xlsx (path or in-memory buffer)
   - Provides the column schema and valid function/chart-type lookups
 
-Running Order column schema
-───────────────────────────
-  row_id          Integer — unique row identifier (1-based)
-  enabled         1 / 0 — control flag; disabled rows are skipped
-  function        Function name, e.g. create_ppt / insert_chart / save_ppt / save_pdf / empty_placeholder
-  slide_index     0-based slide index (blank for structural functions)
-  placeholder     Placeholder name, e.g. "Chart 1" (blank for structural functions)
-  chart_type_ref  Base Chart function name, e.g. ranked_column (blank for non-chart rows)
-  cache_file      JSON cache filename supplying data for this chart (blank for non-chart rows)
-  left_emu        Left position in EMU
-  top_emu         Top position in EMU
-  width_emu       Width in EMU
-  height_emu      Height in EMU
-  notes           Free text — for the user's reference only; ignored at runtime
+Column schema: see COLUMNS below. Full schema table: Architecture §4.
+Function categories: see STRUCTURAL_FUNCTIONS / CONTENT_FUNCTIONS /
+BATCH_FUNCTIONS below. Full function descriptions: Functional Spec §9.2.
 
 The Running Order always begins with create_ppt and ends with save_ppt (and
 optionally save_pdf). These are structural rows and have no position data.
-
-Structural functions
-────────────────────
-  create_ppt          Opens the template and saves a working copy
-  save_ppt            Saves the output as .pptx
-  save_pdf            Saves the output as .pdf (via COM — requires PowerPoint on machine)
-
-Content functions
-─────────────────
-  insert_chart        Renders a Base Chart and inserts it at the named placeholder position
-  empty_placeholder   No-op row for a placeholder that has no content assigned yet
 """
 
 import os

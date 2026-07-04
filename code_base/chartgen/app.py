@@ -16,11 +16,10 @@ from modules.m01_data_acquisition.api_client import get_token
 from modules.m05_chart_engine.cache_reader import list_cached_files, load_shape, load_manifest
 from modules.m05_chart_engine.chart_type_map import get_valid_chart_types
 from modules.m05_chart_engine.base_charts import render_chart
-from modules.m10_project_config.settings import load_settings, save_settings, get_output_folder
 from modules.m12_local_config.local_config import load_last_username, save_last_username
-from modules.m14_project_file.project_file import (
-    ProjectState, open_project, save_project, new_project, close_project,
-    read_project_info, write_lock, clear_lock
+from modules.m14_workfile_file.workfile_file import (
+    WorkfileState, open_workfile, save_workfile, new_workfile, close_workfile,
+    read_workfile_info, write_lock, clear_lock
 )
 
 CHART_TYPE_MAP_PATH = os.path.join(
@@ -30,7 +29,7 @@ DEFAULT_EMAIL = "aidan.rawlinson@nhs.net"
 
 
 # ---------------------------------------------------------------------------
-# Helpers — ProjectState accessors
+# Helpers — WorkfileState accessors
 # ---------------------------------------------------------------------------
 
 def _format_uk_time(iso_str: str) -> str:
@@ -48,55 +47,45 @@ def _format_uk_time(iso_str: str) -> str:
         return iso_str[:16].replace("T", " ")
 
 
-def _ps() -> ProjectState:
-    """Return the current ProjectState from session state."""
-    return st.session_state.get("project_state")
+def _ws() -> WorkfileState:
+    """Return the current WorkfileState from session state."""
+    return st.session_state.get("workfile_state")
 
 
-def _has_project() -> bool:
-    return _ps() is not None
+def _has_workfile() -> bool:
+    return _ws() is not None
 
 
 def _settings() -> dict:
-    ps = _ps()
-    if ps is not None:
-        return ps.settings
-    return load_settings()
+    return _ws().settings
 
 
 def _save_settings(s: dict):
-    ps = _ps()
-    if ps is not None:
-        ps.settings = s
-        ps.dirty = True
-    else:
-        save_settings(s)
+    ws = _ws()
+    ws.settings = s
+    ws.dirty = True
 
 
 def _submissions() -> list:
-    ps = _ps()
-    if ps is not None:
-        return ps.submissions
-    from modules.m10_project_config.submissions import load_submissions
-    return load_submissions()
+    return _ws().submissions
 
 
 def _manifest() -> dict:
-    ps = _ps()
-    return load_manifest(ps)
+    ws = _ws()
+    return load_manifest(ws)
 
 
 def _cached_files() -> list:
-    ps = _ps()
-    return list_cached_files(ps)
+    ws = _ws()
+    return list_cached_files(ws)
 
 
 def _load_shape_ps(filename):
-    ps = _ps()
-    return load_shape(filename, ps)
+    ws = _ws()
+    return load_shape(filename, ws)
 
 
-def _clear_project_session_state():
+def _clear_workfile_session_state():
     for k in ["ro_rows", "ro_file_mtime", "ro_selected_idx", "run_log_rows",
               "pop_expander_open", "pop_expand_services_val", "pop_include_org_val"]:
         st.session_state.pop(k, None)
@@ -114,12 +103,12 @@ def show_login(lock_info: dict = None):
 
     if lock_info and lock_info.get("locked_by"):
         st.warning(
-            f"This project was opened by **{lock_info['locked_by']}** "
+            f"This workfile was opened by **{lock_info['locked_by']}** "
             f"on {lock_info.get('locked_at', 'unknown time')}. "
             "Are you sure you want to open it?"
         )
         if st.button("Cancel — do not open"):
-            st.session_state.pop("pending_cgp_path", None)
+            st.session_state.pop("pending_workfile_path", None)
             st.rerun()
 
     default_email = load_last_username() or DEFAULT_EMAIL
@@ -141,13 +130,13 @@ def show_login(lock_info: dict = None):
                     st.session_state["username"] = email.strip()
                     st.session_state["token"] = token
 
-                    # If we were opening a .cgp, write the lock and load it now
-                    pending = st.session_state.pop("pending_cgp_path", None)
+                    # If we were opening a .cgw, write the lock and load it now
+                    pending = st.session_state.pop("pending_workfile_path", None)
                     if pending:
                         write_lock(pending, email.strip())
-                        ps = open_project(pending)
-                        ps.locked_by = email.strip()
-                        st.session_state["project_state"] = ps
+                        ws = open_workfile(pending)
+                        ws.locked_by = email.strip()
+                        st.session_state["workfile_state"] = ws
 
                     st.rerun()
                 except Exception as e:
@@ -163,9 +152,9 @@ if "authenticated" not in st.session_state:
 
 if not st.session_state["authenticated"]:
     lock_info = None
-    pending = st.session_state.get("pending_cgp_path")
+    pending = st.session_state.get("pending_workfile_path")
     if pending and os.path.exists(pending):
-        info = read_project_info(pending)
+        info = read_workfile_info(pending)
         if info.get("locked_by"):
             lock_info = info
     show_login(lock_info=lock_info)
@@ -187,61 +176,61 @@ with st.sidebar:
     st.caption("Analysis and Reporting software")
     st.divider()
 
-    ps = _ps()
-    has_project = ps is not None
+    ws = _ws()
+    has_workfile = ws is not None
 
-    if has_project:
-        project_label = ps.project_name or os.path.basename(ps.cgp_path)
-        dirty_marker = " ●" if ps.dirty else ""
-        st.markdown(f"**{project_label}**{dirty_marker}")
-        if ps.last_saved_by:
-            st.caption(f"Saved by {ps.last_saved_by}")
-            st.caption(_format_uk_time(ps.last_saved_at))
+    if has_workfile:
+        workfile_label = ws.workfile_name or os.path.basename(ws.workfile_path)
+        dirty_marker = " ●" if ws.dirty else ""
+        st.markdown(f"**{workfile_label}**{dirty_marker}")
+        if ws.last_saved_by:
+            st.caption(f"Saved by {ws.last_saved_by}")
+            st.caption(_format_uk_time(ws.last_saved_at))
         st.divider()
 
-    # New / Open — active only when no project is open
-    if st.button("New project", use_container_width=True, disabled=has_project):
+    # New / Open — active only when no workfile is open
+    if st.button("New workfile", use_container_width=True, disabled=has_workfile):
         st.session_state["show_new_form"] = True
         st.session_state.pop("show_open_form", None)
         st.rerun()
 
-    if st.button("Open project", use_container_width=True, disabled=has_project):
+    if st.button("Open workfile", use_container_width=True, disabled=has_workfile):
         st.session_state["show_open_form"] = True
         st.session_state.pop("show_new_form", None)
         st.rerun()
 
     st.divider()
 
-    # Save / Save and Close / Close Without Saving — active only when a project is open
-    if st.button("Save", use_container_width=True, disabled=not has_project):
-        save_project(ps, st.session_state["username"])
+    # Save / Save and Close / Close Without Saving — active only when a workfile is open
+    if st.button("Save", use_container_width=True, disabled=not has_workfile):
+        save_workfile(ws, st.session_state["username"])
         st.rerun()
 
-    if st.button("Save as", use_container_width=True, disabled=not has_project):
+    if st.button("Save as", use_container_width=True, disabled=not has_workfile):
         st.session_state["show_save_as_form"] = True
         st.rerun()
 
-    if st.button("Save and close", use_container_width=True, disabled=not has_project):
-        save_project(ps, st.session_state["username"])
-        close_project(ps)
-        st.session_state.pop("project_state", None)
-        _clear_project_session_state()
+    if st.button("Save and close", use_container_width=True, disabled=not has_workfile):
+        save_workfile(ws, st.session_state["username"])
+        close_workfile(ws)
+        st.session_state.pop("workfile_state", None)
+        _clear_workfile_session_state()
         st.rerun()
 
-    if st.button("Close without saving", use_container_width=True, disabled=not has_project):
-        if has_project and ps.dirty:
+    if st.button("Close without saving", use_container_width=True, disabled=not has_workfile):
+        if has_workfile and ws.dirty:
             st.session_state["confirm_close_without_saving"] = True
         else:
-            close_project(ps)
-            st.session_state.pop("project_state", None)
-            _clear_project_session_state()
+            close_workfile(ws)
+            st.session_state.pop("workfile_state", None)
+            _clear_workfile_session_state()
         st.rerun()
 
     st.divider()
     st.caption(f"Signed in as {st.session_state.get('username', '')}")
     if st.button("Sign out", use_container_width=True):
-        if ps:
-            close_project(ps)
+        if ws:
+            close_workfile(ws)
         for k in list(st.session_state.keys()):
             del st.session_state[k]
         st.rerun()
@@ -253,7 +242,7 @@ with st.sidebar:
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
-# New project form
+# New workfile form
 # ---------------------------------------------------------------------------
 
 def _pick_folder() -> str:
@@ -264,16 +253,16 @@ def _pick_folder() -> str:
         root = tk.Tk()
         root.withdraw()
         root.wm_attributes("-topmost", True)
-        folder = filedialog.askdirectory(title="Select save location for new project")
+        folder = filedialog.askdirectory(title="Select save location for new workfile")
         root.destroy()
         return folder or ""
     except Exception:
         return ""
 
 
-def _show_new_project_form():
+def _show_new_workfile_form():
     from modules.m01_data_acquisition.api_client import get_projects, get_submissions, get_organisations
-    from modules.m10_project_config.organisations import FIELDNAMES as ORG_FIELDS
+    from modules.constants_temp.constants_temp import ORGANISATIONS_FIELDNAMES as ORG_FIELDS
 
     st.caption("All fields required.")
 
@@ -299,11 +288,11 @@ def _show_new_project_form():
     )
     selected_project_id = project_options.get(selected_project_name, "")
 
-    project_name = st.text_input(
-        "Project name",
+    workfile_name = st.text_input(
+        "Workfile name",
         value=selected_project_name or "",
-        key="np_project_name",
-        help="Used as the file name (without .cgp).",
+        key="np_workfile_name",
+        help="Used as the file name (without .cgw).",
     )
 
     col_browse, col_clear = st.columns([2, 1])
@@ -326,12 +315,12 @@ def _show_new_project_form():
 
     st.divider()
 
-    if st.button("Create project", type="primary", key="np_create"):
+    if st.button("Create workfile", type="primary", key="np_create"):
         errors = []
         if not selected_project_id:
             errors.append("Please select a project.")
-        if not project_name.strip():
-            errors.append("Please enter a project name.")
+        if not workfile_name.strip():
+            errors.append("Please enter a workfile name.")
         folder = st.session_state.get("np_save_folder_val", "").strip()
         if not folder:
             errors.append("Please enter a save location.")
@@ -342,7 +331,7 @@ def _show_new_project_form():
                 st.error(e)
             return
 
-        cgp_path = os.path.join(folder, f"{project_name.strip()}.cgp")
+        workfile_path = os.path.join(folder, f"{workfile_name.strip()}.cgw")
 
         with st.spinner("Fetching project data…"):
             try:
@@ -356,8 +345,8 @@ def _show_new_project_form():
                 st.error(f"Could not load submissions: {e}")
                 return
 
-        ps_new = new_project(cgp_path, project_name.strip())
-        ps_new.settings = {
+        ws_new = new_workfile(workfile_path, workfile_name.strip())
+        ws_new.settings = {
             "year":                    str(selected_year),
             "project_id":              str(selected_project_id),
             "project_name":            selected_project_name,
@@ -367,7 +356,7 @@ def _show_new_project_form():
             "batch_cursor":            "0",
         }
 
-        ps_new.organisations = [
+        ws_new.organisations = [
             {f: row.get(f, "") for f in ORG_FIELDS} for row in org_rows
         ]
 
@@ -393,16 +382,16 @@ def _show_new_project_form():
                 "service_response_counts": "|".join(str(s["response_count"]) for s in services),
                 "Region()":                org.get("region_name", ""),
             })
-        ps_new.submissions = rows_out
+        ws_new.submissions = rows_out
 
-        ps_new.locked_by = st.session_state["username"]
-        write_lock(cgp_path, st.session_state["username"])
-        save_project(ps_new, st.session_state["username"])
+        ws_new.locked_by = st.session_state["username"]
+        write_lock(workfile_path, st.session_state["username"])
+        save_workfile(ws_new, st.session_state["username"])
 
-        st.session_state["project_state"] = ps_new
+        st.session_state["workfile_state"] = ws_new
         st.session_state.pop("show_new_form", None)
         st.session_state.pop("np_save_folder", None)
-        _clear_project_session_state()
+        _clear_workfile_session_state()
         st.rerun()
 
 
@@ -413,16 +402,16 @@ def _show_new_project_form():
 def _show_save_as_form():
     import shutil
 
-    ps_cur = _ps()
-    s = ps_cur.settings
+    ws_cur = _ws()
+    s = ws_cur.settings
 
     st.caption("Choose a new location and/or name. The cleaned PowerPoint template is copied alongside it.")
 
-    project_name = st.text_input(
-        "Project name",
-        value=ps_cur.project_name or "",
-        key="sa_project_name",
-        help="Used as the file name (without .cgp).",
+    workfile_name = st.text_input(
+        "Workfile name",
+        value=ws_cur.workfile_name or "",
+        key="sa_workfile_name",
+        help="Used as the file name (without .cgw).",
     )
 
     col_browse, col_clear = st.columns([2, 1])
@@ -446,26 +435,26 @@ def _show_save_as_form():
     st.divider()
     col_save, col_cancel = st.columns([1, 1])
 
-    def _do_save_as(new_cgp_path: str, new_name: str):
-        old_cgp_path = ps_cur.cgp_path
+    def _do_save_as(new_workfile_path: str, new_name: str):
+        old_workfile_path = ws_cur.workfile_path
         old_template_path = (s.get("cleaned_template_path") or "").strip()
 
-        # Copy the cleaned template alongside the new .cgp, renamed to match
+        # Copy the cleaned template alongside the new .cgw, renamed to match
         if old_template_path and os.path.exists(old_template_path):
-            new_template_path = os.path.join(os.path.dirname(new_cgp_path), f"{new_name}.pptx")
+            new_template_path = os.path.join(os.path.dirname(new_workfile_path), f"{new_name}.pptx")
             shutil.copyfile(old_template_path, new_template_path)
             s["cleaned_template_path"] = new_template_path
             s["ppt_template_path"] = new_template_path
 
-        ps_cur.project_name = new_name
-        write_lock(new_cgp_path, st.session_state["username"])
-        ps_cur.locked_by = st.session_state["username"]
-        save_project(ps_cur, st.session_state["username"], target_path=new_cgp_path)
+        ws_cur.workfile_name = new_name
+        write_lock(new_workfile_path, st.session_state["username"])
+        ws_cur.locked_by = st.session_state["username"]
+        save_workfile(ws_cur, st.session_state["username"], target_path=new_workfile_path)
 
         # Release the lock on the old file — we've moved away from it
-        if old_cgp_path and old_cgp_path != new_cgp_path and os.path.exists(old_cgp_path):
+        if old_workfile_path and old_workfile_path != new_workfile_path and os.path.exists(old_workfile_path):
             try:
-                clear_lock(old_cgp_path)
+                clear_lock(old_workfile_path)
             except Exception:
                 pass
 
@@ -476,9 +465,9 @@ def _show_save_as_form():
 
     if col_save.button("Save as", type="primary", key="sa_save"):
         errors = []
-        name = project_name.strip()
+        name = workfile_name.strip()
         if not name:
-            errors.append("Please enter a project name.")
+            errors.append("Please enter a workfile name.")
         folder = folder_val.strip()
         if not folder:
             errors.append("Please choose a save location.")
@@ -488,13 +477,13 @@ def _show_save_as_form():
             for e in errors:
                 st.error(e)
         else:
-            new_cgp_path = os.path.join(folder, f"{name}.cgp")
-            if os.path.exists(new_cgp_path):
-                st.session_state["sa_confirm_overwrite_path"] = new_cgp_path
+            new_workfile_path = os.path.join(folder, f"{name}.cgw")
+            if os.path.exists(new_workfile_path):
+                st.session_state["sa_confirm_overwrite_path"] = new_workfile_path
                 st.session_state["sa_confirm_overwrite_name"] = name
                 st.rerun()
             else:
-                _do_save_as(new_cgp_path, name)
+                _do_save_as(new_workfile_path, name)
 
     if col_cancel.button("Cancel", key="sa_cancel"):
         st.session_state.pop("show_save_as_form", None)
@@ -506,7 +495,7 @@ def _show_save_as_form():
         st.warning(f"A file already exists at {overwrite_path}. Overwrite it?")
         c1, c2 = st.columns(2)
         if c1.button("Overwrite", type="primary", key="sa_overwrite_confirm"):
-            _do_save_as(overwrite_path, st.session_state.get("sa_confirm_overwrite_name", project_name.strip()))
+            _do_save_as(overwrite_path, st.session_state.get("sa_confirm_overwrite_name", workfile_name.strip()))
         if c2.button("Cancel", key="sa_overwrite_cancel"):
             st.session_state.pop("sa_confirm_overwrite_path", None)
             st.session_state.pop("sa_confirm_overwrite_name", None)
@@ -514,11 +503,11 @@ def _show_save_as_form():
 
 
 # ---------------------------------------------------------------------------
-# Open project form
+# Open workfile form
 # ---------------------------------------------------------------------------
 
-def _pick_cgp_file() -> str:
-    """Open a native Windows file picker for .cgp files."""
+def _pick_workfile_file() -> str:
+    """Open a native Windows file picker for .cgw files."""
     try:
         import tkinter as tk
         from tkinter import filedialog
@@ -526,8 +515,8 @@ def _pick_cgp_file() -> str:
         root.withdraw()
         root.wm_attributes("-topmost", True)
         path = filedialog.askopenfilename(
-            title="Open ChartGen project",
-            filetypes=[("ChartGen project", "*.cgp"), ("All files", "*.*")],
+            title="Open ChartGen workfile",
+            filetypes=[("ChartGen workfile", "*.cgw"), ("All files", "*.*")],
         )
         root.destroy()
         return path or ""
@@ -535,52 +524,52 @@ def _pick_cgp_file() -> str:
         return ""
 
 
-def _show_open_project_form():
+def _show_open_workfile_form():
     col_browse2, col_clear2 = st.columns([2, 1])
     with col_browse2:
-        if st.button("📂  Browse for .cgp file…", key="op_browse", use_container_width=True):
-            picked = _pick_cgp_file()
+        if st.button("📂  Browse for .cgw file…", key="op_browse", use_container_width=True):
+            picked = _pick_workfile_file()
             if picked:
-                st.session_state["op_cgp_path_val"] = picked
+                st.session_state["op_workfile_path_val"] = picked
             st.rerun()
     with col_clear2:
-        if st.button("Clear", key="op_clear", disabled=not st.session_state.get("op_cgp_path_val")):
-            st.session_state["op_cgp_path_val"] = ""
+        if st.button("Clear", key="op_clear", disabled=not st.session_state.get("op_workfile_path_val")):
+            st.session_state["op_workfile_path_val"] = ""
             st.rerun()
 
-    cgp_path_val = st.session_state.get("op_cgp_path_val", "")
-    if cgp_path_val:
-        st.success(f"✔  {cgp_path_val}")
+    workfile_path_val = st.session_state.get("op_workfile_path_val", "")
+    if workfile_path_val:
+        st.success(f"✔  {workfile_path_val}")
     else:
         st.caption("No file selected.")
 
     st.divider()
 
     if st.button("Open", type="primary", key="op_open"):
-        path = st.session_state.get("op_cgp_path_val", "").strip()
+        path = st.session_state.get("op_workfile_path_val", "").strip()
         if not path:
             st.error("Please enter a path.")
             return
         if not os.path.exists(path):
             st.error("File not found.")
             return
-        if not path.endswith(".cgp"):
-            st.error("Please select a .cgp file.")
+        if not path.endswith(".cgw"):
+            st.error("Please select a .cgw file.")
             return
 
-        info = read_project_info(path)
+        info = read_workfile_info(path)
         if info.get("locked_by"):
             st.session_state["op_lock_warning_path"] = path
             st.session_state["op_lock_warning_info"] = info
             st.rerun()
         else:
             write_lock(path, st.session_state["username"])
-            ps = open_project(path)
-            ps.locked_by = st.session_state["username"]
-            st.session_state["project_state"] = ps
+            ws = open_workfile(path)
+            ws.locked_by = st.session_state["username"]
+            st.session_state["workfile_state"] = ws
             st.session_state.pop("show_open_form", None)
-            st.session_state.pop("op_cgp_path", None)
-            _clear_project_session_state()
+            st.session_state.pop("op_workfile_path", None)
+            _clear_workfile_session_state()
             st.rerun()
 
     # Lock warning — shown inline, does not force re-login
@@ -588,21 +577,21 @@ def _show_open_project_form():
     if lock_path:
         lock_info = st.session_state.get("op_lock_warning_info", {})
         st.warning(
-            f"This project was opened by **{lock_info.get('locked_by', 'unknown')}** "
+            f"This workfile was opened by **{lock_info.get('locked_by', 'unknown')}** "
             f"on {lock_info.get('locked_at', 'an unknown time')}. "
             "Are you sure you want to open it?"
         )
         c1, c2 = st.columns(2)
         if c1.button("Open anyway", type="primary", key="op_lock_confirm"):
             write_lock(lock_path, st.session_state["username"])
-            ps = open_project(lock_path)
-            ps.locked_by = st.session_state["username"]
-            st.session_state["project_state"] = ps
+            ws = open_workfile(lock_path)
+            ws.locked_by = st.session_state["username"]
+            st.session_state["workfile_state"] = ws
             st.session_state.pop("show_open_form", None)
-            st.session_state.pop("op_cgp_path", None)
+            st.session_state.pop("op_workfile_path", None)
             st.session_state.pop("op_lock_warning_path", None)
             st.session_state.pop("op_lock_warning_info", None)
-            _clear_project_session_state()
+            _clear_workfile_session_state()
             st.rerun()
         if c2.button("Cancel", key="op_lock_cancel"):
             st.session_state.pop("op_lock_warning_path", None)
@@ -614,9 +603,9 @@ if st.session_state.get("confirm_close_without_saving"):
     st.warning("Close without saving? Unsaved changes will be lost.")
     c1, c2 = st.columns(2)
     if c1.button("Close without saving", type="primary"):
-        close_project(ps)
-        st.session_state.pop("project_state", None)
-        _clear_project_session_state()
+        close_workfile(ws)
+        st.session_state.pop("workfile_state", None)
+        _clear_workfile_session_state()
         st.session_state.pop("confirm_close_without_saving", None)
         st.rerun()
     if c2.button("Cancel"):
@@ -625,29 +614,29 @@ if st.session_state.get("confirm_close_without_saving"):
     st.stop()
 
 if st.session_state.get("show_new_form"):
-    st.title("New Project")
-    _show_new_project_form()
+    st.title("New Workfile")
+    _show_new_workfile_form()
     st.stop()
 
 if st.session_state.get("show_open_form"):
-    st.title("Open Project")
-    _show_open_project_form()
+    st.title("Open Workfile")
+    _show_open_workfile_form()
     st.stop()
 
 if st.session_state.get("show_save_as_form"):
-    st.title("Save Project As")
+    st.title("Save Workfile As")
     _show_save_as_form()
     st.stop()
 
 
 # ---------------------------------------------------------------------------
-# No-project-loaded state
+# No-workfile-loaded state
 # ---------------------------------------------------------------------------
 
-if not _has_project():
+if not _has_workfile():
     st.title("ChartGen")
     st.caption("Analysis and Reporting software")
-    st.info("No project open. Use the sidebar to create a new project or open an existing one.")
+    st.info("No workfile open. Use the sidebar to create a new workfile or open an existing one.")
     st.stop()
 
 
@@ -659,9 +648,9 @@ st.title("ChartGen")
 st.caption("Analysis and Reporting software")
 
 (tab_details, tab_config, tab_imports, tab_select,
- tab_text, tab_running_order, tab_charts, tab_batches, tab_debug) = st.tabs([
+ tab_text, tab_running_order, tab_charts, tab_batches) = st.tabs([
     "Details", "Config", "Imports", "Select",
-    "Text", "Running Order", "Charts", "Batches", "Debug"
+    "Text", "Running Order", "Charts", "Batches"
 ])
 
 
@@ -671,15 +660,15 @@ st.caption("Analysis and Reporting software")
 
 with tab_details:
     st.header("Project Details")
-    st.caption("These settings were configured at project creation.")
+    st.caption("These settings were configured at workfile creation.")
     s = _settings()
     st.markdown(f"**Year** &nbsp;&nbsp; {s.get('year', '—')}")
     st.markdown(f"**Project** &nbsp;&nbsp; {s.get('project_name', '—')}")
     st.markdown(f"**Project ID** &nbsp;&nbsp; `{s.get('project_id', '—')}`")
-    st.markdown(f"**File** &nbsp;&nbsp; `{_ps().cgp_path}`")
-    if _ps().last_saved_by:
-        st.markdown(f"**Last saved by** &nbsp;&nbsp; {_ps().last_saved_by}")
-        st.markdown(f"**Last saved at** &nbsp;&nbsp; {_format_uk_time(_ps().last_saved_at)}")
+    st.markdown(f"**File** &nbsp;&nbsp; `{_ws().workfile_path}`")
+    if _ws().last_saved_by:
+        st.markdown(f"**Last saved by** &nbsp;&nbsp; {_ws().last_saved_by}")
+        st.markdown(f"**Last saved at** &nbsp;&nbsp; {_format_uk_time(_ws().last_saved_at)}")
 
 
 # ---------------------------------------------------------------------------
@@ -697,7 +686,6 @@ with tab_config:
 
 with tab_select:
     import pandas as pd
-    from modules.m10_project_config.submissions import submissions_to_display_rows
 
     st.header("Selection & Populations")
     submissions = _submissions()
@@ -749,6 +737,36 @@ with tab_select:
     st.subheader("Populations")
     st.caption("Item tables define the comparator population.")
 
+    def _submissions_to_display_rows(rows: list, expand_services: bool = False) -> list:
+        """
+        Prepare submission rows for display in the Populations table.
+
+        expand_services=False: one row per submission, service columns as pipe-delimited strings.
+        expand_services=True:  one row per service for submissions that have services;
+                               submissions without services appear as a single row with blank service columns.
+                               Submission-level columns repeat on every service row.
+        """
+        if not expand_services:
+            return rows
+
+        expanded = []
+        for row in rows:
+            ids   = [v for v in row["service_item_ids"].split("|")          if v] if row["service_item_ids"] else []
+            names = [v for v in row["service_item_names"].split("|")        if v] if row["service_item_names"] else []
+            counts= [v for v in row["service_response_counts"].split("|")   if v] if row["service_response_counts"] else []
+
+            if not ids:
+                expanded.append(row)
+            else:
+                for i, sid in enumerate(ids):
+                    expanded.append({
+                        **row,
+                        "service_item_ids":          sid,
+                        "service_item_names":         names[i] if i < len(names) else "",
+                        "service_response_counts":    counts[i] if i < len(counts) else "",
+                    })
+        return expanded
+
     with st.expander("Submissions — item table", expanded=st.session_state.get("pop_expander_open", True)):
         if not submissions:
             st.info("No submissions data.")
@@ -769,7 +787,7 @@ with tab_select:
             display_rows = submissions if include_org else [
                 r for r in submissions if r.get("submission_level", "") != "O"
             ]
-            display_rows = submissions_to_display_rows(display_rows, expand_services)
+            display_rows = _submissions_to_display_rows(display_rows, expand_services)
 
             display_cols = [
                 "submission_id", "submission_code", "submission_name",
@@ -814,10 +832,10 @@ with tab_imports:
             from modules.m02_template_reader.template_reader import read_template, update_urls_csv
             from modules.m03_running_order.running_order import generate_from_template
 
-            ps_cur = _ps()
-            cgp_dir = os.path.dirname(ps_cur.cgp_path)
-            project_name = ps_cur.project_name or "template"
-            cleaned_path = os.path.join(cgp_dir, f"{project_name}.pptx")
+            ws_cur = _ws()
+            workfile_dir = os.path.dirname(ws_cur.workfile_path)
+            workfile_name = ws_cur.workfile_name or "template"
+            cleaned_path = os.path.join(workfile_dir, f"{workfile_name}.pptx")
 
             # Step 1 — Read template
             raw_bytes = uploaded_template.getbuffer()
@@ -835,12 +853,12 @@ with tab_imports:
                     st.stop()
             os.unlink(tmp_path)
 
-            # Save cleaned template to disk alongside .cgp
+            # Save cleaned template to disk alongside .cgw
             with open(cleaned_path, "wb") as f:
                 f.write(result.cleaned_pptx_bytes)
 
-            # Store reference copy in ProjectState
-            ps_cur.template_pptx_bytes = result.cleaned_pptx_bytes
+            # Store reference copy in WorkfileState
+            ws_cur.template_pptx_bytes = result.cleaned_pptx_bytes
 
             s = _settings()
             s["cleaned_template_path"] = cleaned_path
@@ -860,12 +878,12 @@ with tab_imports:
             # Step 2 — Fetch chart data
             new_urls = [{"url": p.url, "label": p.label} for p in result.placeholders if p.url]
             if new_urls:
-                # Merge into ProjectState urls
-                existing = {u["url"] for u in ps_cur.urls}
+                # Merge into WorkfileState urls
+                existing = {u["url"] for u in ws_cur.urls}
                 added = 0
                 for u in new_urls:
                     if u["url"] not in existing:
-                        ps_cur.urls.append(u)
+                        ws_cur.urls.append(u)
                         added += 1
                 already = len(new_urls) - added
                 st.info(f"urls — {added} new URL(s) added, {already} already present. Fetching…")
@@ -881,7 +899,7 @@ with tab_imports:
                     fetch_results = fetch_all(
                         st.session_state["token"],
                         on_progress=_on_fetch_progress,
-                        project_state=ps_cur,
+                        workfile_state=ws_cur,
                     )
                 status_text.empty()
                 progress_bar.empty()
@@ -898,8 +916,8 @@ with tab_imports:
             with st.spinner("Step 3 of 3 — Generating Running Order…"):
                 manifest = _manifest()
                 rows = generate_from_template(result, manifest)
-                ps_cur.running_order_rows = rows
-                ps_cur.dirty = True
+                ws_cur.running_order_rows = rows
+                ws_cur.dirty = True
                 st.success(f"Running Order generated — {len(rows)} rows.")
 
             st.session_state["template_result"] = result
@@ -918,7 +936,7 @@ with tab_imports:
             fetch_results = fetch_all(
                 st.session_state["token"],
                 on_progress=on_progress,
-                project_state=_ps(),
+                workfile_state=_ws(),
             )
         status_text.empty()
         progress_bar.empty()
@@ -961,8 +979,8 @@ with tab_text:
 with tab_running_order:
     st.header("Running Order")
 
-    ps_ro = _ps()
-    if not ps_ro.running_order_rows:
+    ws_ro = _ws()
+    if not ws_ro.running_order_rows:
         st.info("No Running Order found. Upload and process a PowerPoint template in the Imports tab.")
     else:
         try:
@@ -986,11 +1004,11 @@ with tab_running_order:
                         if _shape and _ref:
                             chart_type_by_shape.setdefault(_shape, []).append(_ref)
 
-            rows = ps_ro.running_order_rows
+            rows = ws_ro.running_order_rows
 
             @st.dialog("Edit row", width="large")
             def _row_edit_dialog(sel_idx):
-                row  = ps_ro.running_order_rows[sel_idx]
+                row  = ws_ro.running_order_rows[sel_idx]
                 func = str(row.get("function", ""))
                 is_insert_chart    = func == "insert_chart"
                 is_set_default_pop = func == "set_default_populations"
@@ -1058,13 +1076,13 @@ with tab_running_order:
                 col_apply, col_cancel = st.columns([1, 1])
 
                 if col_apply.button("Apply", type="primary"):
-                    ps_ro.running_order_rows[sel_idx]["enabled"] = 1 if f_enabled else 0
-                    ps_ro.running_order_rows[sel_idx]["notes"]   = f_notes
+                    ws_ro.running_order_rows[sel_idx]["enabled"] = 1 if f_enabled else 0
+                    ws_ro.running_order_rows[sel_idx]["notes"]   = f_notes
                     if is_insert_chart:
-                        ps_ro.running_order_rows[sel_idx]["chart_type_ref"] = f_chart_type
+                        ws_ro.running_order_rows[sel_idx]["chart_type_ref"] = f_chart_type
                     if needs_populations:
-                        ps_ro.running_order_rows[sel_idx]["populations"] = f_populations
-                    ps_ro.dirty = True
+                        ws_ro.running_order_rows[sel_idx]["populations"] = f_populations
+                    ws_ro.dirty = True
                     st.session_state["ro_selected_idx"] = None
                     st.rerun()
 
@@ -1135,8 +1153,8 @@ with tab_running_order:
                         label_visibility="collapsed",
                     )
                     if uploaded_ro is not None:
-                        ps_ro.running_order_rows = read_xlsx(io.BytesIO(uploaded_ro.getbuffer()))
-                        ps_ro.dirty = True
+                        ws_ro.running_order_rows = read_xlsx(io.BytesIO(uploaded_ro.getbuffer()))
+                        ws_ro.dirty = True
                         st.session_state["ro_show_uploader"] = False
                         st.rerun()
 
@@ -1224,7 +1242,7 @@ with tab_batches:
 
     _s           = _settings()
     _subs        = _submissions()
-    _cgp_dir     = os.path.dirname(_ps().cgp_path)
+    _workfile_dir = os.path.dirname(_ws().workfile_path)
     _cleaned_tpl = _s.get("cleaned_template_path", "").strip()
     _tpl         = _s.get("ppt_template_path", "").strip()
     _active_tpl  = _cleaned_tpl if os.path.exists(_cleaned_tpl) else _tpl
@@ -1232,8 +1250,8 @@ with tab_batches:
     _sel_row     = next((r for r in _subs if str(r["submission_id"]) == _sel_id), None)
     _total       = len(_subs)
     _cursor      = min(int(_s.get("batch_cursor", 0)), _total)
-    _outputs_dir = os.path.join(_cgp_dir, "outputs")
-    _ro_rows     = _ps().running_order_rows
+    _outputs_dir = os.path.join(_workfile_dir, "outputs")
+    _ro_rows     = _ws().running_order_rows
 
     st.markdown('<h1 style="font-size:1.8em;margin:0 0 4px 0;padding:0;">Process Outputs</h1>'
                 '<hr style="border:none;border-top:1px solid #ddd;margin:0 0 6px 0;">', unsafe_allow_html=True)
@@ -1262,7 +1280,7 @@ with tab_batches:
     _can_run = not _issues and bool(_enabled_rows)
 
     def _build_rows_to_run():
-        return [r for r in _ps().running_order_rows if r["enabled"] == 1]
+        return [r for r in _ws().running_order_rows if r["enabled"] == 1]
 
     def _run_for_submissions(submissions_to_run: list, run_label: str):
         from modules.m06_assembly_engine.assembly_engine import (
@@ -1281,7 +1299,7 @@ with tab_batches:
         base_settings = dict(_s)
         base_settings["cleaned_template_path"] = _active_tpl
         base_settings["outputs_folder"] = _outputs_dir
-        base_settings["project_state"] = _ps()
+        base_settings["workfile_state"] = _ws()
         os.makedirs(os.path.join(_outputs_dir, "pptx"), exist_ok=True)
         os.makedirs(os.path.join(_outputs_dir, "pdf"), exist_ok=True)
 
@@ -1302,7 +1320,7 @@ with tab_batches:
             run_settings["selected_submission_id"] = str(sub["submission_id"])
             run_settings["cleaned_template_path"]  = _active_tpl
             run_settings["outputs_folder"]         = _outputs_dir
-            run_settings["project_state"]          = _ps()
+            run_settings["workfile_state"]         = _ws()
 
             result = run_running_order(normal_rows, run_settings, ctx=shared_ctx)
 
@@ -1481,12 +1499,3 @@ with tab_batches:
                 f"</table></div>",
                 unsafe_allow_html=True,
             )
-
-
-# ---------------------------------------------------------------------------
-# Debug tab
-# ---------------------------------------------------------------------------
-
-with tab_debug:
-    st.header("Debug Trace")
-    st.info("Debug trace coming soon.")

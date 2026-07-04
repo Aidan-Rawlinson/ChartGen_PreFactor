@@ -5,7 +5,6 @@ Each URL yields: project_id, tier_id, group, option, and label.
 """
 
 from urllib.parse import urlparse, parse_qs
-import csv
 
 
 def parse_url(url: str, label: str = "") -> dict:
@@ -45,21 +44,3 @@ def parse_url(url: str, label: str = "") -> dict:
         "group": group,
         "option": option,
     }
-
-
-def load_urls(csv_path: str) -> list[dict]:
-    """
-    Load and parse all URLs from the project config CSV.
-    CSV format: url,label (no header row).
-    Returns a list of parsed URL dicts.
-    """
-    results = []
-    with open(csv_path, newline="", encoding="utf-8-sig") as f:
-        reader = csv.reader(f)
-        for row in reader:
-            if not row or not row[0].strip():
-                continue
-            url = row[0].strip()
-            label = row[1].strip() if len(row) > 1 else ""
-            results.append(parse_url(url, label))
-    return results
