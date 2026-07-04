@@ -73,3 +73,11 @@ Never modify `ChartGen_Primer.md` without explicit permission for that specific 
 - Show every proposed change as a diff or clear summary and wait for explicit approval before applying it.
 - Edit one document per pass where possible. Flag unrelated issues noticed in a document rather than fixing them unasked.
 - If content is uncertain or belongs elsewhere, delete it and flag the gap rather than leaving a hedged version in place.
+
+---
+
+## 8. Mid-Session Writes (MCP Environment)
+
+- Once a proposed change to any of the six documents is approved (Section 7), write it immediately to the mirror copy in `static_docs_mirror/project_files` — don't hold approved edits in conversation memory pending session Close-down.
+- Once a document's mirror copy has been written to mid-session, it is ahead of the Project Files version visible in Claude Desktop, which only updates when the user re-uploads it at Close-down. Diff any further edit to that document later in the same session against the current mirror copy, not the version originally supplied in context.
+- This section governs writes that happen during a session's work. It does not alter the Session Start or Close-down protocols — Close-down's mirror step remains a verification pass, confirming the mirror matches what was approved, not the first point of writing.
