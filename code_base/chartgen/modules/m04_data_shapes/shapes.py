@@ -1,19 +1,6 @@
 """
 shapes.py
-Canonical data shapes for ChartGen.
-
-Three shapes cover all current chart types:
-  - NumericSeries             one or more independent numeric Metric-Series per comparative unit
-  - NumericCompositional      one or more Metric-Series per comparative unit, each with Component-Series summing to a whole
-  - CategoricalCompositional  one or more Metric-Series per comparative unit, each with categorical Component-Series summing to a whole
-
-All shapes:
-  - Hold stats at exactly two levels: shape level and Metric-Series level (Principle 12)
-  - Are immutable once written (Principle 14)
-  - Tolerate null values and absent metadata (Principle 6)
-  - Do not know their source (Principle 3)
-  - Carry has_valid_unit_data to indicate whether per-unit data is present (Principle 7)
-  - Stats classes are distinct per shape type (Principle 8 — stats define the shape)
+Canonical data shapes for ChartGen — NumericSeries, NumericCompositional, and CategoricalCompositional.
 """
 
 from dataclasses import dataclass, field
@@ -37,10 +24,7 @@ class ComparativeUnit:
 
 @dataclass
 class ShapeStats:
-    """
-    Shape-level summary statistics. Describes the container, not the contents.
-    These are identical in structure across all three shapes.
-    """
+    """Shape-level summary statistics, identical in structure across all three shapes."""
     count_metric_series:        Optional[int] = None  # number of Metric-Series in this shape
     count_comparative_units:    Optional[int] = None  # total units in population
     count_units_with_any_data:  Optional[int] = None  # units with data in at least one Metric-Series
@@ -52,10 +36,7 @@ class ShapeStats:
 
 @dataclass
 class NumericSeriesMetricStats:
-    """
-    Metric-Series-level stats for a NumericSeries shape.
-    Each Metric-Series is an independent numeric dataset — stats are straightforward descriptives.
-    """
+    """Metric-Series-level stats for a NumericSeries shape."""
     count_with_data:    Optional[int]   = None
     count_null:         Optional[int]   = None
     mean:               Optional[float] = None
@@ -68,19 +49,13 @@ class NumericSeriesMetricStats:
 
 @dataclass
 class NumericSeriesUnit(ComparativeUnit):
-    """
-    One comparative unit's values across one or more independent Metric-Series.
-    values[i] is the value for Metric-Series i; None indicates missing data.
-    """
+    """One comparative unit's values across one or more independent Metric-Series."""
     values: list[Optional[float]] = field(default_factory=list)
 
 
 @dataclass
 class NumericSeries:
-    """
-    One or more independent numeric Metric-Series across a comparative population.
-    No summing constraint between series.
-    """
+    """One or more independent numeric Metric-Series across a comparative population."""
     # Metadata
     title:              Optional[str]       = None
     metric_names:       list[str]           = field(default_factory=list)  # one per Metric-Series
@@ -102,12 +77,7 @@ class NumericSeries:
 
 @dataclass
 class NumericCompositionalMetricStats:
-    """
-    Metric-Series-level stats for a NumericCompositional shape.
-    Each Metric-Series has Component-Series that sum to a whole.
-    Stats characterise the metric, not individual components.
-    Per-component counts are held as a collection within the Metric-Series stats.
-    """
+    """Metric-Series-level stats for a NumericCompositional shape."""
     count_with_data:        Optional[int]           = None  # units with at least one non-null component
     count_null:             Optional[int]            = None  # units with all components null
     component_counts_with_data: list[Optional[int]] = field(default_factory=list)  # one per Component-Series
@@ -115,11 +85,7 @@ class NumericCompositionalMetricStats:
 
 @dataclass
 class NumericCompositionalUnit(ComparativeUnit):
-    """
-    One comparative unit's values for one Metric-Series in a NumericCompositional shape.
-    values[i] is the value for Component-Series i; all values sum to a whole.
-    Stored as a list of units per Metric-Series — see NumericCompositional.
-    """
+    """One comparative unit's values for one Metric-Series in a NumericCompositional shape."""
     values: list[Optional[float]] = field(default_factory=list)
 
 
@@ -134,10 +100,7 @@ class NumericCompositionalMetric:
 
 @dataclass
 class NumericCompositional:
-    """
-    One or more Metric-Series per comparative unit, each composed of Component-Series summing to a whole.
-    Each Metric-Series is independent; its components are not.
-    """
+    """One or more Metric-Series per comparative unit, each composed of Component-Series summing to a whole."""
     # Metadata
     title:              Optional[str]       = None
     year:               Optional[int]       = None
@@ -153,23 +116,15 @@ class NumericCompositional:
 
 @dataclass
 class CategoricalCompositionalMetricStats:
-    """
-    Metric-Series-level stats for a CategoricalCompositional shape.
-    Each Metric-Series is one question; its Component-Series are the response categories.
-    Stats characterise the question across the population.
-    Per-component counts are held as a collection — one per category.
-    """
+    """Metric-Series-level stats for a CategoricalCompositional shape."""
     count_with_data:            Optional[int]           = None  # units that gave a response
-    count_null:                 Optional[int]           = None  # units with no response
+    count_null:                 Optional[int]            = None  # units with no response
     component_counts:           list[Optional[int]]     = field(default_factory=list)  # one count per category
 
 
 @dataclass
 class CategoricalCompositionalUnit(ComparativeUnit):
-    """
-    One comparative unit's response for one Metric-Series (question).
-    response is the category value; None indicates no response.
-    """
+    """One comparative unit's response for one Metric-Series (question)."""
     response: Optional[str] = None
 
 
@@ -184,11 +139,7 @@ class CategoricalCompositionalMetric:
 
 @dataclass
 class CategoricalCompositional:
-    """
-    One or more Metric-Series (questions) per comparative population.
-    Each question has a fixed set of categorical Component-Series (response options) that sum to a whole.
-    Binary Yes/No questions are the degenerate case (Principle 11).
-    """
+    """One or more Metric-Series (questions) per comparative population, each with categorical Component-Series that sum to a whole."""
     # Metadata
     title:              Optional[str]       = None
     year:               Optional[int]       = None
@@ -205,13 +156,7 @@ class CategoricalCompositional:
 
 @dataclass
 class PopulationShape:
-    """
-    A filtered data shape representing one population layer.
-
-    role    — the token from the populations string: 'All', 'Region()', 'Selected', etc.
-    label   — the resolved human-readable value, e.g. 'London' for Region()
-    shape   — a filtered copy of the data shape with stats recalculated against this population only
-    """
+    """A filtered data shape representing one population layer."""
     role:  str
     label: str
     shape: object  # NumericSeries | NumericCompositional | CategoricalCompositional
@@ -327,4 +272,3 @@ def filter_shape(shape, submission_ids: set):
     elif isinstance(shape, CategoricalCompositional):
         return filter_categorical_compositional(shape, submission_ids)
     raise TypeError(f"Unknown shape type: {type(shape)}")
-

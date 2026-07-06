@@ -1,10 +1,6 @@
 """
 api_client.py
-Handles authentication and all API calls to the NHS Benchmarking members API.
-
-Two calls are made per URL:
-  1. get_tier_info(tier_id)      -> reportId, reportYear, serviceItemId, serviceItemName
-  2. get_chart_data(...)         -> full chart JSON including storedProcedure and data
+Authentication and API calls to the NHS Benchmarking members API.
 """
 
 import requests
@@ -15,10 +11,7 @@ ORGANISATION_ID = 232  # Default org used to retrieve full population data
 
 
 def get_token(username: str, password: str) -> str:
-    """
-    Authenticate against the API.
-    Returns a session token string; raises on invalid credentials or network error.
-    """
+    """Authenticate against the API and return a session token."""
     response = requests.get(
         f"{BASE_URL}/authentication",
         auth=(username, password),
@@ -29,11 +22,7 @@ def get_token(username: str, password: str) -> str:
 
 
 def get_tier_info(tier_id: int, token: str) -> dict:
-    """
-    API call 1: retrieve report metadata for a given tier.
-    Endpoint: GET /outputs/tiers/{tier_id}/years
-    Returns the full parsed JSON response.
-    """
+    """Retrieve report metadata for a given tier."""
     response = requests.get(
         f"{BASE_URL}/outputs/tiers/{tier_id}/years",
         headers={"Accept": "application/json", "Token": token},
@@ -45,7 +34,6 @@ def get_tier_info(tier_id: int, token: str) -> dict:
 def get_projects(year: int, token: str) -> list:
     """
     Retrieve the list of visible projects for a given year.
-    Endpoint: GET /projects/list?year={year}
     Returns a list of dicts with keys: project_id, project_name.
     """
     response = requests.get(
@@ -64,10 +52,8 @@ def get_projects(year: int, token: str) -> list:
 
 def get_submissions(project_id: int, year: int, token: str, include_org_level: bool = False) -> list:
     """
-    Retrieve the submission list for a given project and year.
-    Endpoint: GET /submissions/submissionServiceList?projectId={project_id}&year={year}
-    Returns a list of dicts, one per submission. Service lists are kept as Python lists.
-    Organisational-level submissions (submissionLevel == "O") are excluded by default.
+    Retrieve the submission list for a given project and year, one dict per submission.
+    Organisational-level submissions are excluded by default.
     """
     response = requests.get(
         f"{BASE_URL}/submissions/submissionServiceList",
@@ -115,10 +101,9 @@ VALID_ORG_TYPE_IDS = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 21, 26
 
 def get_organisations(year: int, token: str) -> list:
     """
-    Retrieve the organisation reference list for a given year.
-    Endpoint: GET /organisations?year={year}
-    Filters to VALID_ORG_TYPE_IDS. Returns a list of dicts with keys:
-    organisation_id, organisation_name, nhs_code, organisation_type_name, region_name.
+    Retrieve the organisation reference list for a given year, filtered to VALID_ORG_TYPE_IDS.
+    Returns a list of dicts with keys: organisation_id, organisation_name, nhs_code,
+    organisation_type_name, region_name.
     """
     response = requests.get(
         f"{BASE_URL}/organisations",
@@ -151,11 +136,7 @@ def get_chart_data(
     token: str,
     organisation_id: int = ORGANISATION_ID,
 ) -> dict:
-    """
-    API call 2: retrieve chart data for a given report.
-    Endpoint: GET /outputs/{report_id}/data
-    Returns the full parsed JSON response.
-    """
+    """Retrieve chart data for a given report."""
     if service_item_id == "null" or service_item_id is None:
         service_item_id = "0"
 

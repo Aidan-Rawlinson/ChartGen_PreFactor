@@ -1,21 +1,7 @@
 """
 running_order.py
-M03 — Running Order
-
-Manages the Running Order as a list of row dicts (the canonical store lives
-in WorkfileState.running_order_rows, persisted as running_order.csv inside
-the .cgw). The .xlsx is a transient human-editing format only — generated
-on demand for download, parsed on upload, never persisted to disk:
-  - Generates a skeleton from a TemplateReadResult (one row per placeholder)
-  - Writes/reads rows to/from an .xlsx (path or in-memory buffer)
-  - Provides the column schema and valid function/chart-type lookups
-
-Column schema: see COLUMNS below. Full schema table: Architecture §4.
-Function categories: see STRUCTURAL_FUNCTIONS / CONTENT_FUNCTIONS /
-BATCH_FUNCTIONS below. Full function descriptions: Functional Spec §9.2.
-
-The Running Order always begins with create_ppt and ends with save_ppt (and
-optionally save_pdf). These are structural rows and have no position data.
+Manages the Running Order — the row-based instruction list that drives report assembly —
+as a list of row dicts, with .xlsx export/import for human editing.
 """
 
 import os
@@ -234,10 +220,7 @@ def _normalise_url(url: str) -> str:
 
 
 def _build_url_to_cache_map(manifest: dict) -> dict:
-    """
-    Build url -> cache_filename map from the manifest.
-    Manifest entries may have a "url" key written by the cache writer.
-    """
+    """Build url -> cache_filename map from the manifest."""
     mapping = {}
     for filename, entry in manifest.items():
         url = entry.get("url", "")
@@ -253,17 +236,7 @@ def _build_url_to_cache_map(manifest: dict) -> dict:
 def write_xlsx(rows: list[dict], output_path: str,
                chart_type_map_path: str = None,
                manifest: dict = None):
-    """
-    Write Running Order rows to a formatted .xlsx file.
-
-    Columns have dropdown validation where applicable:
-      - function: list of ALL_FUNCTIONS
-      - chart_type_ref: filtered by shape_type of the row's cache_file
-      - enabled: 1 / 0
-
-    chart_type_map_path: path to m09_static_config/chart_type_map.csv
-    manifest: cache manifest dict for shape_type lookups
-    """
+    """Write Running Order rows to a formatted .xlsx file with dropdown validation on function, chart_type_ref, and enabled."""
     if not OPENPYXL_AVAILABLE:
         raise ImportError("openpyxl is required to write the Running Order xlsx.")
 

@@ -1,23 +1,6 @@
 """
 workfile_file.py
-M14 — Workfile File: .cgw file format and WorkfileState management.
-
-Owns everything to do with the .cgw ZIP archive:
-  - WorkfileState dataclass — in-memory representation of all workfile data
-  - open_workfile   — read .cgw into WorkfileState
-  - save_workfile   — serialise WorkfileState back to .cgw
-  - new_workfile    — create a blank WorkfileState
-  - close_workfile  — clear lock fields and discard state
-
-No other module touches the ZIP directly. Everything else in the codebase
-receives a WorkfileState and works against it.
-
-Lock mechanism:
-  workfile_info.json inside the .cgw carries locked_by / locked_at fields.
-  These are written on open (after login) and cleared on close.
-  A second user opening a locked workfile sees an advisory warning before
-  proceeding to login. The lock is advisory — stale locks from crashes are
-  handled by the warning prompt, not by a hard block.
+Owns the .cgw ZIP format and WorkfileState — the in-memory representation of a workfile.
 """
 
 import io
@@ -219,10 +202,7 @@ def clear_lock(workfile_path: str):
 
 
 def _update_workfile_info(workfile_path: str, updates: dict):
-    """
-    Read workfile_info.json from .cgw, apply updates, write back.
-    Uses a full rewrite of the ZIP to update the uncompressed entry cleanly.
-    """
+    """Read workfile_info.json from .cgw, apply updates, and write back."""
     try:
         info = read_workfile_info(workfile_path)
         info.update(updates)
@@ -234,10 +214,7 @@ def _update_workfile_info(workfile_path: str, updates: dict):
 
 
 def _rewrite_single_file(workfile_path: str, arcname: str, data: bytes, compress_type=zipfile.ZIP_DEFLATED):
-    """
-    Replace a single file inside a ZIP by rewriting the full archive.
-    This avoids duplicate entries that zipfile append mode creates.
-    """
+    """Replace a single file inside a ZIP by rewriting the full archive."""
     buf = io.BytesIO()
     with zipfile.ZipFile(workfile_path, "r") as zin:
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zout:
@@ -262,11 +239,8 @@ def _rewrite_single_file(workfile_path: str, arcname: str, data: bytes, compress
 
 def save_workfile(state: WorkfileState, username: str, target_path: str = None):
     """
-    Serialise WorkfileState back to the .cgw ZIP.
-    Updates last_saved_by / last_saved_at. Does not touch lock fields.
-
-    target_path: write to this path instead of state.workfile_path, and update
-    state.workfile_path to match (used by Save As). Defaults to state.workfile_path.
+    Serialise WorkfileState back to the .cgw ZIP, updating last_saved_by/at but not lock fields.
+    target_path overrides state.workfile_path (used by Save As).
     """
     from modules.constants_temp.constants_temp import (
         SUBMISSIONS_FIELDNAMES as SUB_FIELDS, ORGANISATIONS_FIELDNAMES as ORG_FIELDS

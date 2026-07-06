@@ -1,13 +1,6 @@
 """
 transformers.py
-One transformation function per stored procedure group.
-Each takes raw API JSON and a year string; returns a canonical data shape.
-
-Stored procedure → shape mapping:
-  sp_a_generic_bar_chart_*          → NumericSeries
-  sp_a_generic_list_pie_chart_*     → CategoricalCompositional
-  sp_a_generic_yn_chart_*           → CategoricalCompositional
-  sp_a_generic_radar_*              → NumericCompositional (partial — has_valid_unit_data=False)
+One transformation function per stored procedure group; each converts raw API JSON into a canonical data shape.
 """
 
 from modules.m04_data_shapes.shapes import (
@@ -254,7 +247,7 @@ def transform_radar_chart(data, year):
     Radar/skill mix chart.
     yearData rows are segments (not submissions) — submissionCode is the segment label.
     response1 = sample average; response2 = submission value (null without selected submission).
-    has_valid_unit_data = False — deferred until submission-specific fetch is implemented.
+    has_valid_unit_data = False for this shape.
     """
     year_data = data.get("yearData", {}).get(year, [])
 

@@ -55,3 +55,20 @@
 
 **Decision:** The "M10/M11 status" paragraph and module-tree entries for `m10_project_config`/`m11_data_cache` were removed from Architecture and Glossary, rather than updated in place.
 **Rationale:** Both modules were fully retired in the prior session (Refactoring Issues Session 1). A "current system" architecture document has no reason to describe modules that no longer exist; the historical record of their removal already lives in Refactoring Issues Session 1's entry, so restating it in Architecture was pure duplication once the modules were gone rather than merely dead-code-flagged.
+
+## Session 4 — [Date not specified]
+
+**Decision:** Refactoring Issues Session 10 (Docstring protocol and review) was executed ahead of Session 3, resequencing the pre-planned Part 1 order.
+**Rationale:** User request at session start; no dependency forced Session 3 to go first, and the docstring pass was judged quick, low-risk, and doc-adjacent.
+
+**Decision:** Final docstring protocol — a docstring states only identity (what a module/function is or does), never mechanics, rationale, design intent, roadmap language, or cross-references to other documents or constants; length target of 1 sentence, 2 only with strong justification (e.g. a necessary caller-facing caveat).
+**Rationale:** Agreed iteratively with the user across several rounds of discussion. Explicitly reverses the Session 1 `running_order.py` docstring, which had cross-referenced Architecture/Functional Spec — that pattern is superseded, not extended.
+
+**Decision:** Untyped dict/row contracts with no type or schema defined elsewhere (API response shapes, Running Order row fields, yellow-box classification, the populations-string token legend) are a deliberate exception to the "no schemas" rule and are kept in docstrings.
+**Rationale:** User judged that cutting these loses information with no other home — nothing else in the codebase currently documents these shapes. Logged as a Part 2 open question on whether these should become typed structures instead, which would let the exception be retired.
+
+**Decision:** Dataclass field-position/semantics documentation (e.g. `NumericSeriesUnit.values[i]` correspondence to `metric_names[i]`, `PopulationShape.role`/`label` string-value meaning, `CategoricalCompositionalUnit.response` meaning) does **not** get the same exception as the dict/row contracts, and was cut.
+**Rationale:** User's explicit ruling — although the same underlying problem (no type captures the meaning) applies, these are dataclass fields rather than untyped dicts/rows, and the general "cut" rule was judged to still apply.
+
+**Decision:** The disputed accuracy of `running_order.py`'s `read_xlsx` docstring (claims it skips `enabled == 0` rows; code appears not to) was not investigated, fixed, or logged as a bug — the docstring was left as-is since it already fit within the 2-sentence limit.
+**Rationale:** User was skeptical of the claimed discrepancy and asked for it to be dropped entirely, with no special handling — treated as an ordinary docstring under the normal length rule rather than a code-correctness question.

@@ -11,7 +11,7 @@ This document is split into two parts: items being handled in the ChartGen_PreFa
 * ~~Legacy disk-fallback code in M10/M11.~~ Done — traced every disk-fallback branch and helper against live call sites, confirmed all unreachable on the `ProjectState` path, and removed them: the dead branches/constants in `cache_writer.py`, `fetch.py`, `url_parser.py`, and `cache_reader.py`; `m10_project_config/settings.py` in full plus the orphaned `settings.csv`/`urls.csv`; the empty `m11_data_cache/` folder. This also surfaced two follow-on structural fixes — see Decisions log — resulting in the retirement of `m10_project_config` entirely and the creation of `constants_temp` (Part 2).
 * ~~Debug tab (Debug Trace) — never used in practice.~~ Done — removed from `app.py` and the Functional Spec.
 * ~~Delete `Claude_Please_Check.md` from the repository — references superseded document names.~~ Done — deleted from the repository.
-* ~~Stale module docstring in `m03_running_order/running_order.py` — documents the old 12-column schema and an outdated function list.~~ Done — docstring trimmed to purpose and contract; column schema and function categories now cross-referenced to `COLUMNS`/`STRUCTURAL_FUNCTIONS`/`CONTENT_FUNCTIONS`/`BATCH_FUNCTIONS` and to Architecture §4 / Functional Spec §9.2, rather than restated.
+* ~~Stale module docstring in `m03_running_order/running_order.py` — documents the old 12-column schema and an outdated function list.~~ Done — docstring trimmed to purpose and contract; column schema and function categories now cross-referenced to `COLUMNS`/`STRUCTURAL_FUNCTIONS`/`CONTENT_FUNCTIONS`/`BATCH_FUNCTIONS` and to Architecture §4 / Functional Spec §9.2, rather than restated. (Superseded by Session 10 — the docstring protocol agreed there disallows cross-referencing; this docstring has since been trimmed further.)
 
 ### Session 2 — Workfile rename
 
@@ -65,14 +65,21 @@ This document is split into two parts: items being handled in the ChartGen_PreFa
 
 ### Session 10 — Docstring protocol and review
 
-* No consistent policy exists yet for what a module/function docstring should and shouldn't contain. The `m03_running_order/running_order.py` fix (Session 1) established a working principle by example — docstrings state purpose and contract; anything mechanically enumerable (schemas, function lists, column definitions) is cross-referenced to the code constant and/or the owning reference document (Architecture/Functional Spec) rather than restated in prose — but this hasn't been written down as a standing rule, and no other module's docstrings have been checked against it.
-* Scope: agree and record the policy, then review every module's docstrings across the codebase for the same class of drift (duplicated schemas, stale function lists, restated facts that already live in a constant or a reference document), fixing each on the same pattern.
+* ~~No consistent policy exists yet for what a module/function docstring should and shouldn't contain. The `m03_running_order/running_order.py` fix (Session 1) established a working principle by example — docstrings state purpose and contract; anything mechanically enumerable (schemas, function lists, column definitions) is cross-referenced to the code constant and/or the owning reference document (Architecture/Functional Spec) rather than restated in prose — but this hasn't been written down as a standing rule, and no other module's docstrings have been checked against it.~~
+* ~~Scope: agree and record the policy, then review every module's docstrings across the codebase for the same class of drift (duplicated schemas, stale function lists, restated facts that already live in a constant or a reference document), fixing each on the same pattern.~~
+
+Done — policy agreed and applied:
+  - A docstring states only identity — what a module/function is or does — never mechanics, rationale, design intent, roadmap language, or cross-references to other documents or constants. This supersedes the Session 1 `running_order.py` example above, which cross-referenced Architecture/Functional Spec; that is no longer the pattern.
+  - Length target: 1 sentence; 2 with strong justification (e.g. a necessary caller-facing caveat).
+  - Exception: untyped dict/row contracts with no type or schema defined anywhere else (API response shapes in `api_client.py`/`fetch.py`, Running Order row fields in `insert_picture.py`/`insert_from_excel.py`/`assembly_engine.py`, yellow-box classification in `template_reader.py`, the populations-string token legend in `assembly_engine.py`) are kept in docstrings, since cutting them would lose information with no other home. See Part 2 for the governance question this raises.
+  - Every module and function docstring across the codebase has been reviewed and brought into line with this policy in this session.
 
 ---
 
 ## Part 2 — Passed to the Main Refactor
 
 * Type coercion at the CSV/WorkfileState boundary is currently ad hoc (fixed once, for `enabled`) rather than systematic. Worth a single normalisation step applied uniformly at every Running Order entry point, or a move to typed dataclasses for Running Order rows instead of raw dicts.
+* Several functions pass data as untyped dicts rather than dataclasses (API responses, Running Order rows, fetch results, yellow-box classification). Their shape currently exists only in docstrings and call-site usage, not in any type. Given the vibe-coded origin of this codebase, worth a dedicated discussion on whether these should become typed structures (dataclasses/TypedDicts) for accountability — which would also let docstrings drop the schema enumeration currently kept there as a stopgap (see Session 10).
 * Allow a single `.cgw` workfile to draw on multiple TBN projects, including projects hosted on different databases — which may require ChartGen to hold more than one set of credentials at once.
 * `.cgw` file association and installer — natural fit once the application is judged stable enough for wider distribution.
 * Text Engine and Batch Controller as dedicated modules — flag token replacement and the batch iteration loop are currently not split into their own module folders. Planned as part of the refactor.

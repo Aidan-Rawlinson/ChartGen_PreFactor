@@ -1,23 +1,7 @@
 """
 base_charts.py
-Base Chart functions — one per chart type reference.
-
-Every function signature:
-    fn(population_shapes, width, height, tweaks=[], report_context=None) -> (image_bytes, autotable_stats)
-
-population_shapes: ordered list of PopulationShape(role, label, shape).
-  - population_shapes[0]  is the broadest scope (usually All)
-  - population_shapes[-1] is the most specific (usually Selected)
-  - Each shape is independently filtered and has stats recalculated for its population
-
-The first shape always defines the dataset drawn. Subsequent shapes are
-highlighting layers. The chart makes its own visual decisions about what
-"emphasis" means for each layer — colour for bar charts, tiers for bead
-string, markers for distribution charts.
-
-NumericCompositional and CategoricalCompositional charts render aggregated
-statistics from the first shape only. Population layers are not applicable
-to these types as they show population-level aggregates, not per-unit values.
+Base Chart functions — one per chart type reference. Each takes population_shapes, width, height,
+tweaks, and report_context, and returns (image_bytes, autotable_stats).
 """
 
 import io
@@ -99,11 +83,7 @@ def _layer_colour(pop_index: int, role: str, peer_colour_idx: int) -> str:
 
 
 def _resolve_unit_colours(units: list, population_shapes: list) -> list:
-    """
-    Assign a colour to each unit by iterating population layers in order.
-    Later layers paint over earlier ones, so Selected (last) always wins.
-    Units not in any non-All layer keep BAR_BLUE.
-    """
+    """Assign a colour to each unit based on which population layer(s) it belongs to."""
     colours = [BAR_BLUE] * len(units)
     peer_colour_idx = 0
     for ps in population_shapes:
@@ -837,14 +817,7 @@ def treemap(population_shapes: list, width=65, height=45, tweaks=[], report_cont
 # ===========================================================================
 
 def bead_string_dot_plot(population_shapes: list, width=80, height=40, tweaks=[], report_context=None):
-    """
-    Multi-tier bead-string dot plot.
-
-    Each population shape becomes one tier. Tiers are ordered bottom (broadest)
-    to top (most specific). Each tier renders only the units in its own filtered
-    shape — the sequential intersection model means higher tiers are strict
-    subsets of lower ones.
-    """
+    """Multi-tier bead-string dot plot — one tier per population shape."""
     if not population_shapes:
         fig, ax = plt.subplots()
         ax.text(0.5, 0.5, "No data", ha="center", va="center")

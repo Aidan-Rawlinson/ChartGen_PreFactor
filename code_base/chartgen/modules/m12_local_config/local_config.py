@@ -1,29 +1,6 @@
 """
 local_config.py
-M12 — Local Config: per-machine, per-user configuration and runtime context.
-
-Owns two distinct concerns:
-  1. Local user config — credentials and anything else that is per-user /
-     per-machine rather than per-workfile. This data must NOT live in the
-     workfile (which is shareable) or in static config. Credentials
-     storage here is a temporary arrangement pending a full credentials
-     model redesign.
-
-  2. Runtime context — ReportContext holds the selected reporting unit and
-     any population context needed by the chart engine for highlighting.
-     It is constructed once per batch run by the Assembly Engine from
-     settings and the submissions CSV, then passed through the pipeline
-     to every render_chart call.
-
-Future additions (peer groups, hierarchy level) slot in cleanly here
-without touching the data layer or the config layer.
-
-NOTE — PopulationSlice and resolve_populations were removed in Stage 10.
-They were an early sketch of the populations model, superseded by:
-  - PopulationShape  in m04_data_shapes/shapes.py
-  - build_population_shapes  in m06_assembly_engine/assembly_engine.py
-Those are the live implementations. This module owns only ReportContext
-and the helpers that construct it.
+Per-machine, per-user configuration (credentials) and per-batch runtime context (ReportContext).
 """
 
 import os
@@ -46,9 +23,8 @@ class ReportContext:
 
 def get_peer_group_columns(submissions: list) -> list:
     """
-    Return peer group column names from the submissions CSV, in column order.
-    These are columns whose names match the Name() pattern.
-    Bookended options (All, Selected) are not included — callers add those.
+    Return peer group column names (matching the Name() pattern) from the submissions CSV, in column order.
+    Does not include 'All' or 'Selected' — callers add those.
     """
     if not submissions:
         return []

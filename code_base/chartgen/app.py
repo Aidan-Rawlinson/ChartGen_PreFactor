@@ -738,14 +738,7 @@ with tab_select:
     st.caption("Item tables define the comparator population.")
 
     def _submissions_to_display_rows(rows: list, expand_services: bool = False) -> list:
-        """
-        Prepare submission rows for display in the Populations table.
-
-        expand_services=False: one row per submission, service columns as pipe-delimited strings.
-        expand_services=True:  one row per service for submissions that have services;
-                               submissions without services appear as a single row with blank service columns.
-                               Submission-level columns repeat on every service row.
-        """
+        """Prepare submission rows for display in the Populations table, optionally expanding services into one row each."""
         if not expand_services:
             return rows
 

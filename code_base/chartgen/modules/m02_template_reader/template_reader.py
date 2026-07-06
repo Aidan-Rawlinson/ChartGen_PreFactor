@@ -1,19 +1,6 @@
 """
 template_reader.py
-M02 — Template Reader
-
-Reads a .pptx template file and produces:
-  1. A list of chart placeholders (name, position, size) per slide
-  2. Any yellow URL textboxes that are fully contained within those placeholders
-  3. A cleaned copy of the template with yellow textboxes stripped
-
-Yellow textbox detection criteria (all three must be true):
-  - Fill colour in HSV: hue 40°–70°, saturation > 50%, value > 50%
-  - The textbox bounds are fully inside a chart placeholder on the same slide
-  - The textbox text contains a URL matching the toolkit URL pattern
-
-One URL per placeholder is the contract. If multiple qualifying textboxes
-fall within the same placeholder, a warning is raised and the first is used.
+Reads a .pptx template and produces chart placeholders, extracted yellow-box content, and a cleaned template copy.
 """
 
 import re
@@ -71,7 +58,7 @@ class PlaceholderInfo:
     left: int                 # EMU
     top: int                  # EMU
     width: int                # EMU
-    height: int               # EMU
+    height: int                # EMU
     # Yellow box classification — one of: "chart", "picture", "excel", ""
     content_type: str = ""
     # chart: toolkit URL
@@ -106,10 +93,7 @@ def _rgb_to_hsv_degrees(r, g, b):
 
 
 def _is_yellow(rgb) -> bool:
-    """
-    Return True if the RGB colour is a human-visible yellow.
-    RGBColor is a tuple subclass — access via index, not .red/.green/.blue.
-    """
+    """Return True if the RGB colour is a human-visible yellow."""
     if rgb is None:
         return False
     try:
@@ -125,13 +109,7 @@ def _is_yellow(rgb) -> bool:
 
 
 def _get_shape_fill_rgb(shape):
-    """
-    Return the solid fill RGBColor of a shape, or None if not determinable.
-
-    python-pptx's fore_color.rgb raises when the colour is stored as a theme
-    colour reference (even if an srgbClr override exists in the XML). We read
-    the raw XML directly to catch both cases reliably.
-    """
+    """Return the solid fill RGBColor of a shape, or None if not determinable."""
     import re as _re
     try:
         xml = shape._element.xml
@@ -157,11 +135,7 @@ def _get_shape_fill_rgb(shape):
 
 
 def _extract_url_from_text(text: str) -> str:
-    """
-    Extract the first toolkit URL from text.
-    Falls back to any HTTP URL if no toolkit URL is found.
-    Returns empty string if nothing found.
-    """
+    """Extract the first toolkit URL from text, falling back to any HTTP URL; returns empty string if none found."""
     m = TOOLKIT_URL_RE.search(text)
     if m:
         return m.group(0).rstrip(".,;)")
@@ -251,14 +225,7 @@ def _fully_contained(inner_left, inner_top, inner_right, inner_bottom,
 # ---------------------------------------------------------------------------
 
 def _is_chart_placeholder(shape) -> bool:
-    """
-    Return True if this shape is a named placeholder that ChartGen
-    should treat as a chart slot.
-
-    We accept any placeholder whose name starts with "Chart" (case-insensitive),
-    OR any picture placeholder, OR any object/content placeholder.
-    We exclude title, body, footer, slide number, date, etc.
-    """
+    """Return True if this shape is a placeholder ChartGen should treat as a chart slot."""
     if not shape.is_placeholder:
         return False
     name_lower = shape.name.lower()
@@ -298,15 +265,7 @@ def _is_autoshape_with_text(shape) -> bool:
 # ---------------------------------------------------------------------------
 
 def read_template(pptx_path: str) -> TemplateReadResult:
-    """
-    Read a .pptx template and return a TemplateReadResult.
-
-    For each slide:
-      1. Collect all chart placeholders (name, position, size)
-      2. Collect all yellow textboxes that contain a URL
-      3. Match yellow URL textboxes to the placeholder they sit inside
-      4. Produce a cleaned copy of the pptx with yellow textboxes removed
-    """
+    """Read a .pptx template and return a TemplateReadResult."""
     prs = Presentation(pptx_path)
     result = TemplateReadResult(
         slide_width=int(prs.slide_width),

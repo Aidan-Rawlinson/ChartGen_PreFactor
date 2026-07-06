@@ -1,25 +1,7 @@
 """
 assembly_engine.py
-M06 — Assembly Engine
-
 Executes a Running Order against a PowerPoint template to produce one output file.
-All report-building logic lives here. Only this module touches python-pptx directly.
-
-Running Order functions implemented
-────────────────────────────────────
-  create_ppt          Opens template; saves working copy named for the reporting unit
-  insert_chart        Renders a Base Chart and inserts it at the placeholder position
-  update_text         Replaces flag tokens in all text shapes with per-unit values
-  empty_placeholder   No-op; placeholder has no content assigned
-  save_ppt            Saves completed output as .pptx
-  save_pdf            Saves completed output as .pdf via COM (requires PowerPoint on machine)
-
-VITAL RULE
-──────────
-Outputs are ONLY created by functions called from the Running Order.
-There are no hidden side-effects. Sub-functions under insert_chart exist solely
-to insert the chart — they do not write files, open templates, or touch anything
-outside the scope of that single insertion.
+Only this module touches python-pptx directly.
 """
 
 import os
@@ -45,27 +27,9 @@ from modules.m08_insert_from_excel.insert_from_excel import (
 def build_population_shapes(data_shape, populations_str: str,
                              submissions: list, report_context) -> list:
     """
-    Build an ordered list of PopulationShape objects from a populations string.
-
-    Each token in the string is an intersecting filter applied sequentially to
-    the running set of submission_ids. Each resulting set produces a filtered
-    copy of the data shape with stats recalculated against that population only.
-
-    'All'      — identity filter; passes all units in the shape
-    'Selected' — filters to units belonging to the current organisation_id
-    'Name()'   — filters to units whose Name() column value matches the
-                 selected unit's value for that column
-
-    The sequential intersection model means:
-        Region(Wales)^Hospital_Size(Large)^Selected
-    produces three shapes:
-        1. Welsh units
-        2. Welsh large-hospital units
-        3. Welsh large-hospital units belonging to the selected organisation
-
-    This model will become more complex in future. For now, sequential
-    intersection is the baseline.
-
+    Build an ordered list of PopulationShape objects from a populations string,
+    applying each '^'-delimited token as a sequential intersecting filter.
+    Tokens: 'All' (identity), 'Selected' (current organisation), 'Name()' (peer group column).
     Returns [] if populations_str is blank or no tokens resolve.
     """
     if not populations_str or not populations_str.strip():
@@ -165,8 +129,7 @@ class AssemblyContext:
 def create_ppt(ctx: AssemblyContext, row: dict, settings: dict) -> dict:
     """
     Open the cleaned template and set the output path.
-    The cleaned template (yellow textboxes already removed) is the source.
-    A copy is NOT written to disk at this stage — save_ppt/save_pdf do that.
+    Does not write to disk — save_ppt/save_pdf do that.
     """
     template_path = settings.get("cleaned_template_path", "").strip()
     if not template_path or not os.path.exists(template_path):
@@ -193,8 +156,7 @@ def create_ppt(ctx: AssemblyContext, row: dict, settings: dict) -> dict:
 def set_default_populations(ctx: AssemblyContext, row: dict, settings: dict) -> dict:
     """
     Store the default populations string on AssemblyContext.
-    All subsequent insert_chart rows inherit this unless they have their own
-    populations value set.
+    Subsequent insert_chart rows inherit it unless overridden per row.
     """
     populations = str(row.get("populations", "") or "").strip()
     ctx.default_populations = populations
@@ -202,13 +164,7 @@ def set_default_populations(ctx: AssemblyContext, row: dict, settings: dict) -> 
 
 
 def insert_chart(ctx: AssemblyContext, row: dict, settings: dict) -> dict:
-    """
-    Render a Base Chart from cached data and insert it at the placeholder position.
-
-    All sub-steps — loading the data shape, rendering the chart image,
-    sizing the image to fit the placeholder, inserting via python-pptx —
-    are internal to this function and exist solely to accomplish the insertion.
-    """
+    """Render a Base Chart from cached data and insert it at the placeholder position."""
     if ctx.prs is None:
         return _err(row, "insert_chart: no open presentation (create_ppt not called?).")
 
@@ -289,17 +245,8 @@ def insert_chart(ctx: AssemblyContext, row: dict, settings: dict) -> dict:
 
 def update_text(ctx: AssemblyContext, row: dict, settings: dict) -> dict:
     """
-    Replace all flag tokens in the presentation with values for the current reporting unit.
-
-    Tokens replaced:
-        [selected-reporting-unit-name]  →  submission_name from ReportContext
-
-    PowerPoint XML splits a single visible string across multiple <a:r> runs at
-    arbitrary points (spell-check boundaries, autocorrect, manual edits). A run-by-run
-    replace will silently miss any token that spans a run boundary. This implementation
-    works at the paragraph level via lxml: it collapses all run text into the first run,
-    does the replacement there, then clears the remaining runs — preserving the
-    formatting of the first run throughout.
+    Replace flag tokens in the presentation with values for the current reporting unit.
+    Tokens: [selected-reporting-unit-name] → submission_name.
     """
     if ctx.prs is None:
         return _err(row, "update_text: no open presentation (create_ppt not called?).")
@@ -441,42 +388,22 @@ def run_running_order(rows: list[dict], settings: dict,
     Execute a list of Running Order rows (already filtered to enabled only).
 
     settings dict must contain at minimum:
-      ppt_template_path      path to the original template
-      cleaned_template_path  path to the cleaned template (yellow boxes removed)
-      workfile_folder        root folder; outputs/ subfolder is created here
-      reporting_unit_name    used to name the output file
-      workfile_state         the open WorkfileState — submissions and cache are
-                              always read from here, never from disk
-
-    ctx: optional existing AssemblyContext — pass a shared context from the
-         Batch Controller so that batch_open state (e.g. open Excel workbooks)
-         persists across reports. If None, a fresh context is created.
-
-    on_progress: optional callback(row_index, total_rows, message)
+      ppt_template_path, cleaned_template_path, workfile_folder,
+      reporting_unit_name, workfile_state
 
     Returns:
-    {
-        "status":   "ok" | "error",
-        "output_path": str,
-        "elapsed":  float,
-        "log":      list[dict],   # one entry per row
-    }
+    {"status": "ok" | "error", "output_path": str, "elapsed": float, "log": list[dict]}
     """
     # Use a shared context if provided (batch run), otherwise create a fresh one.
-    # A shared context carries open Excel workbook references across reports.
     if ctx is None:
         ctx = AssemblyContext()
 
-    # Build ReportContext from the passed-in settings (which carry per-unit overrides
-    # during batch runs) rather than re-reading from disk.
     workfile_state = settings.get("workfile_state")
     submissions = workfile_state.submissions
     ctx.report_context = build_report_context(settings, submissions)
 
     t_start = time.perf_counter()
 
-    # Only run normal-scoped rows — batch_open and batch_close are the
-    # Batch Controller's responsibility and are never passed here.
     normal_rows = [r for r in rows if str(r.get("scope", "normal")).strip() == "normal"]
     rows_to_run = normal_rows
 

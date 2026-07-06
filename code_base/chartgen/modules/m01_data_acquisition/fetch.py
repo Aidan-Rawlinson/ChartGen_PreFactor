@@ -1,15 +1,6 @@
 """
 fetch.py
-Orchestrates the full data acquisition process.
-
-For each URL in WorkfileState.urls:
-  1. Parse the URL into components
-  2. API call 1: get tier info (reportId, year, serviceItemId)
-  3. API call 2: get chart data (raw JSON)
-  4. Transform raw JSON into a canonical data shape
-  5. Save normalised shape into WorkfileState.cache
-
-Called once before a batch run. Not called during batch processing.
+Orchestrates the full data acquisition process for all URLs in WorkfileState.
 """
 
 import os
@@ -23,17 +14,10 @@ def fetch_all(token: str, *, workfile_state, on_progress=None) -> list[dict]:
     """
     Fetch, transform, and cache data for all URLs in WorkfileState.urls.
 
-    token: session token from st.session_state, obtained at login.
-    on_progress: optional callback(current, total, label) for UI progress updates.
-
     Returns a list of result dicts, one per URL:
     {
-        "tier_id": int,
-        "label": str,
-        "status": "ok" | "error",
-        "message": str,
-        "filepath": str | None,
-        "shape_type": str | None,
+        "tier_id": int, "label": str, "status": "ok" | "error",
+        "message": str, "filepath": str | None, "shape_type": str | None,
     }
     """
     urls = [parse_url(u["url"], u.get("label", "")) for u in workfile_state.urls if u.get("url")]

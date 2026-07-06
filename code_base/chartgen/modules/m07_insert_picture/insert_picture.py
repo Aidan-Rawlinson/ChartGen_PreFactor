@@ -1,25 +1,7 @@
 """
 insert_picture.py
-M07 — Insert Picture
-
-Running Order function: insert_picture
-
-Inserts a static image file into the PowerPoint output at a named
-placeholder position. The image path may contain [code] or [id] tokens
-which are substituted at batch time from ReportContext, allowing each
-reporting unit to have its own named asset (e.g. a logo).
-
-Positioning rules:
-  - left, top, width  — always honoured (from Running Order / template)
-  - height            — calculated from the image's actual aspect ratio;
-                        the placeholder height is ignored at render time.
-                        The image may be taller or shorter than the
-                        placeholder the template designer drew.
-
-Failure behaviour:
-  - Path not found after substitution → report fails with a clear error.
-
-Supported formats: .png, .jpg, .jpeg, .gif, .bmp, .tiff, .wmf, .emf
+Running Order function: inserts a static image at a named placeholder, with [code]/[id] token
+substitution. Height is derived from the image's aspect ratio, not the placeholder.
 """
 
 import os
@@ -32,10 +14,7 @@ SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".wmf"
 
 
 def _substitute_tokens(path: str, report_context) -> str:
-    """
-    Replace [code] and [id] tokens in a path string with values from ReportContext.
-    Returns the substituted path.
-    """
+    """Replace [code] and [id] tokens in a path string with values from ReportContext."""
     if report_context is None:
         return path
     path = path.replace("[code]", str(report_context.submission_code))
@@ -47,15 +26,7 @@ def insert_picture(ctx, row: dict, settings: dict) -> dict:
     """
     Insert a static image at the placeholder position defined in the Running Order row.
 
-    Required row fields:
-      image_path   — absolute path to image file; may contain [code] or [id] tokens
-      left_emu     — left position in EMU
-      top_emu      — top position in EMU
-      width_emu    — width in EMU
-      slide_index  — 0-based slide index
-
-    height_emu from the row is stored for record-keeping but not used for insertion;
-    height is derived from the image's actual aspect ratio against width_emu.
+    Required row fields: image_path, left_emu, top_emu, width_emu, slide_index.
     """
     from modules.m06_assembly_engine.assembly_engine import _err, _ok
 

@@ -1,11 +1,6 @@
 """
 cache_writer.py
-Serialises canonical data shapes and saves them to the data cache.
-Maintains the manifest with metadata and fetch timestamps.
-
-Works against WorkfileState — the sole live store for cached chart data.
-
-File naming: {tier_id}_{group}_{option}.json
+Serialises canonical data shapes and saves them into WorkfileState's cache and manifest.
 """
 
 import json
@@ -24,12 +19,7 @@ def _serialise(obj):
 
 def save_chart(tier_id: int, group: int, option: int, label: str, shape, shape_type: str,
                url: str = "", *, workfile_state) -> str:
-    """
-    Serialise a canonical data shape and save it into WorkfileState.cache and
-    WorkfileState.manifest in memory (marks state dirty).
-
-    Returns the cache filename (used for logging).
-    """
+    """Serialise a canonical data shape and save it into WorkfileState.cache and manifest, returning the cache filename."""
     filename = f"{tier_id}_{group}_{option}.json"
     payload = {
         "shape_type": shape_type,

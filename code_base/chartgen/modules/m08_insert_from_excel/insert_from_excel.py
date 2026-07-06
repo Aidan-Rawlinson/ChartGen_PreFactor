@@ -1,69 +1,12 @@
 """
 insert_from_excel.py
-M08 — Insert From Excel
+Running Order functions: open_excel, close_excel, insert_from_excel. Captures a named Excel
+range as an image and inserts it into the PowerPoint output.
 
-Running Order functions: open_excel, close_excel, insert_from_excel
-
-Captures a named range from an open Excel workbook as a PNG image and
-inserts it into the PowerPoint output at a named placeholder position.
-This is the Python rebuild of VBA's Export_Named_Range function.
-
-Workflow
---------
-The Running Order must contain:
-  1. open_excel      — opens the workbook via COM; holds reference on
-                       AssemblyContext. Runs once per batch (scope = batch_open).
-  2. insert_from_excel — writes submission_id to the driver range (if specified),
-                         forces workbook recalculation, captures the export range
-                         as a picture, inserts into the presentation.
-                         Runs once per report (scope = normal).
-  3. close_excel     — releases the COM reference cleanly.
-                       Runs once per batch (scope = batch_close).
-
-open_excel must confirm Excel has opened before returning. If it cannot
-open the file, the batch fails immediately.
-
-insert_from_excel assumes Excel is already open on AssemblyContext. If it
-is not, the report fails with a clear error.
-
-All failures cause the current report not to be processed.
-
-Running Order row fields
-------------------------
-open_excel:
-  excel_path   — full absolute path to the Excel workbook (.xlsx or .xlsm)
-
-close_excel:
-  excel_path   — full absolute path (used to identify which workbook to close)
-
-insert_from_excel:
-  excel_path       — full absolute path to the workbook (must match open_excel)
-  export_range     — named range in the workbook to capture as an image (mandatory)
-  driver_range     — named range to write submission_id into before calculation
-                     (optional — leave blank for static exports)
-  left_emu         — left position in EMU
-  top_emu          — top position in EMU
-  width_emu        — width in EMU
-  slide_index      — 0-based slide index
-
-height_emu from the row is stored for record-keeping but not used;
-height is derived from the captured image's actual aspect ratio against width_emu.
-
-Positioning rules (same as insert_picture):
-  left, top, width  — always honoured
-  height            — calculated from captured image aspect ratio
-
-Dependencies
-------------
-  pywin32 (win32com.client) — Windows only; no Excel add-in required.
-  PIL (Pillow)              — for clipboard image capture and sizing.
-
-Notes
------
-  The workbook is opened with calculation set to manual (xlCalculationManual).
-  Each insert_from_excel call forces a full recalculate (workbook.Calculate())
-  after writing the driver cell, ensuring the export range reflects the
-  current reporting unit before capture.
+Row fields:
+  open_excel / close_excel:   excel_path
+  insert_from_excel:          excel_path, export_range, driver_range (optional),
+                               left_emu, top_emu, width_emu, slide_index
 """
 
 import os
@@ -92,15 +35,7 @@ def _normalise_path(path: str) -> str:
 def open_excel(ctx, row: dict, settings: dict) -> dict:
     """
     Open an Excel workbook via COM and hold the reference on AssemblyContext.
-
-    Opens with:
-      - Application.Visible = False   (silent background operation)
-      - Application.DisplayAlerts = False  (suppress popup dialogs)
-      - Calculation = xlCalculationManual  (no auto-recalc; each insert_from_excel
-                                            triggers Calculate() explicitly)
-
-    Fails immediately if the file cannot be opened.
-    Scope: batch_open — runs once at the start of a batch, not per report.
+    Scope: batch_open — runs once at the start of a batch.
     """
     from modules.m06_assembly_engine.assembly_engine import _err, _ok
 
@@ -312,10 +247,7 @@ def insert_from_excel(ctx, row: dict, settings: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 def _capture_range_as_png(excel_range, xl_app) -> bytes:
-    """
-    Copy an Excel range to the clipboard as a picture and return PNG bytes.
-    Uses CopyPicture to put the image on the clipboard, then ImageGrab to read it.
-    """
+    """Copy an Excel range to the clipboard as a picture and return PNG bytes."""
     import time
     from PIL import ImageGrab
 

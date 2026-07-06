@@ -1,9 +1,6 @@
 """
 cache_reader.py
-Loads a canonical data shape from the data cache by filename.
-Deserialises the JSON back into the appropriate dataclass instance.
-
-Works against WorkfileState.cache — the sole live store for cached chart data.
+Loads a canonical data shape from WorkfileState's cache by filename.
 """
 
 import json
@@ -112,11 +109,7 @@ def _deserialise(json_str: str):
 
 
 def load_shape(filename, workfile_state):
-    """
-    Load a cached data shape by filename (e.g. '88141_0_0.json') from
-    WorkfileState.cache.
-    Returns (shape_instance, shape_type_string).
-    """
+    """Load a cached data shape by filename from WorkfileState.cache, returning (shape_instance, shape_type_string)."""
     return _deserialise(workfile_state.cache[filename])
 
 

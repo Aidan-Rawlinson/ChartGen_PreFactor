@@ -10,19 +10,7 @@ from urllib.parse import urlparse, parse_qs
 def parse_url(url: str, label: str = "") -> dict:
     """
     Parse a single toolkit URL into its components.
-
-    Example URL:
-    https://members.nhsbenchmarking.nhs.uk/outputs/6?tier=88141&group=0
-
-    Returns:
-    {
-        "url": original URL,
-        "label": human-readable label from CSV,
-        "project_id": 6,
-        "tier_id": 88141,
-        "group": 0,
-        "option": 0
-    }
+    Returns {"url", "label", "project_id", "tier_id", "group", "option"}.
     """
     parsed = urlparse(url)
 
