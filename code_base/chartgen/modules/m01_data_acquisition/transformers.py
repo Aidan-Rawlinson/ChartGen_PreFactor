@@ -87,8 +87,8 @@ def transform_bar_chart(data, year):
     for item in year_data:
         values = [_optional_float(item.get(f"response{i+1}")) for i in range(n_metrics)]
         unit = NumericSeriesUnit(
-            submission_code=item.get("submissionCode") or "",
-            submission_id=item.get("submissionId") or 0,
+            unit_code=item.get("submissionCode") or "",
+            unit_id=item.get("submissionId") or 0,
             values=values,
         )
         if "numerator" in item:
@@ -111,7 +111,7 @@ def transform_bar_chart(data, year):
         units=units,
         shape_stats=ShapeStats(
             count_metric_series=n_metrics,
-            count_comparative_units=len(units),
+            count_units=len(units),
             count_units_with_any_data=sum(
                 1 for u in units if any(v is not None for v in u.values)
             ),
@@ -137,8 +137,8 @@ def transform_pie_chart(data, year):
 
     units = [
         CategoricalCompositionalUnit(
-            submission_code=item.get("submissionCode") or "",
-            submission_id=item.get("submissionId") or 0,
+            unit_code=item.get("submissionCode") or "",
+            unit_id=item.get("submissionId") or 0,
             response=item.get("response"),
         )
         for item in table_data
@@ -167,7 +167,7 @@ def transform_pie_chart(data, year):
         metrics=[metric],
         shape_stats=ShapeStats(
             count_metric_series=1,
-            count_comparative_units=len(units),
+            count_units=len(units),
             count_units_with_any_data=count_with_data,
         ),
     )
@@ -203,8 +203,8 @@ def transform_yn_chart(data, year):
             raw = item.get("response")
             response = raw if raw not in (None, "-", " ") else None
             units.append(CategoricalCompositionalUnit(
-                submission_code=item.get("submissionCode") or "",
-                submission_id=item.get("submissionId") or 0,
+                unit_code=item.get("submissionCode") or "",
+                unit_id=item.get("submissionId") or 0,
                 response=response,
             ))
         count_with_data = sum(1 for u in units if u.response is not None)
@@ -222,8 +222,8 @@ def transform_yn_chart(data, year):
             ),
         ))
 
-    all_ids = {u.submission_id for m in metrics for u in m.units}
-    ids_with_data = {u.submission_id for m in metrics for u in m.units if u.response is not None}
+    all_ids = {u.unit_id for m in metrics for u in m.units}
+    ids_with_data = {u.unit_id for m in metrics for u in m.units if u.response is not None}
 
     return CategoricalCompositional(
         title=data.get("reportName"),
@@ -232,7 +232,7 @@ def transform_yn_chart(data, year):
         metrics=metrics,
         shape_stats=ShapeStats(
             count_metric_series=len(metrics),
-            count_comparative_units=len(all_ids),
+            count_units=len(all_ids),
             count_units_with_any_data=len(ids_with_data),
         ),
     )
@@ -245,8 +245,8 @@ def transform_yn_chart(data, year):
 def transform_radar_chart(data, year):
     """
     Radar/skill mix chart.
-    yearData rows are segments (not submissions) — submissionCode is the segment label.
-    response1 = sample average; response2 = submission value (null without selected submission).
+    yearData rows are segments (not units) — submissionCode is the segment label.
+    response1 = sample average; response2 = unit value (null without a selected unit).
     has_valid_unit_data = False for this shape.
     """
     year_data = data.get("yearData", {}).get(year, [])
@@ -259,8 +259,8 @@ def transform_radar_chart(data, year):
         name=data.get("reportName"),
         component_names=segment_names,
         units=[NumericCompositionalUnit(
-            submission_code="SAMPLE_AVG",
-            submission_id=0,
+            unit_code="SAMPLE_AVG",
+            unit_id=0,
             values=sample_avg_values,
         )],
         stats=NumericCompositionalMetricStats(
@@ -278,7 +278,7 @@ def transform_radar_chart(data, year):
         metrics=[metric],
         shape_stats=ShapeStats(
             count_metric_series=1,
-            count_comparative_units=1,
+            count_units=1,
             count_units_with_any_data=1 if count_with_data > 0 else 0,
         ),
     )

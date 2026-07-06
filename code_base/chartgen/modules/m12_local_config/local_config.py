@@ -14,40 +14,40 @@ class ReportContext:
     Runtime context for a single report in a batch run.
     Constructed by the Assembly Engine; passed to render_chart.
     """
-    submission_id:      int
-    submission_code:    str
-    submission_name:    str
+    unit_id:            int
+    unit_code:          str
+    unit_name:          str
     organisation_id:    str
     organisation_name:  str
 
 
-def get_peer_group_columns(submissions: list) -> list:
+def get_peer_group_columns(units: list) -> list:
     """
-    Return peer group column names (matching the Name() pattern) from the submissions CSV, in column order.
+    Return peer group column names (matching the Name() pattern) from the unit table, in column order.
     Does not include 'All' or 'Selected' — callers add those.
     """
-    if not submissions:
+    if not units:
         return []
-    return [col for col in submissions[0].keys() if col.endswith("()")]
+    return [col for col in units[0].keys() if col.endswith("()")]
 
 
-def build_report_context(settings: dict, submissions: list) -> Optional[ReportContext]:
+def build_report_context(settings: dict, units: list) -> Optional[ReportContext]:
     """
-    Build a ReportContext from settings and the loaded submissions list.
-    Returns None if no submission is selected or the selected ID is not found.
+    Build a ReportContext from settings and the loaded unit list.
+    Returns None if no unit is selected or the selected ID is not found.
     """
-    selected_id = str(settings.get("selected_submission_id", "") or "").strip()
+    selected_id = str(settings.get("selected_unit_id", "") or "").strip()
     if not selected_id:
         return None
 
-    row = next((r for r in submissions if str(r["submission_id"]) == selected_id), None)
+    row = next((r for r in units if str(r["unit_id"]) == selected_id), None)
     if row is None:
         return None
 
     return ReportContext(
-        submission_id=int(row["submission_id"]),
-        submission_code=row["submission_code"],
-        submission_name=row["submission_name"],
+        unit_id=int(row["unit_id"]),
+        unit_code=row["unit_code"],
+        unit_name=row["unit_name"],
         organisation_id=row["organisation_id"],
         organisation_name=row["organisation_name"],
     )

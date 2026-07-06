@@ -1,12 +1,12 @@
 """
 constants_temp.py
-Column-order constants for the submissions and organisations reference tables.
+Column-order constants for the units and organisations reference tables.
 """
 
-SUBMISSIONS_FIELDNAMES = [
-    "submission_id",
-    "submission_code",
-    "submission_name",
+UNITS_FIELDNAMES = [
+    "unit_id",
+    "unit_code",
+    "unit_name",
     "submission_year",
     "project_id",
     "project_name",

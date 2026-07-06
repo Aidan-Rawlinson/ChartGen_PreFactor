@@ -72,3 +72,26 @@
 
 **Decision:** The disputed accuracy of `running_order.py`'s `read_xlsx` docstring (claims it skips `enabled == 0` rows; code appears not to) was not investigated, fixed, or logged as a bug — the docstring was left as-is since it already fit within the 2-sentence limit.
 **Rationale:** User was skeptical of the claimed discrepancy and asked for it to be dropped entirely, with no special handling — treated as an ordinary docstring under the normal length rule rather than a code-correctness question.
+
+## Session 5 — [Date not specified]
+
+**Decision:** "Flag token" renamed to "Text Tag".
+**Rationale:** Agreed after distinguishing the token concept (the noun — the placeholder string itself) from "Text Replacement" (the activity name — what `update_text` does). "Replacement" is a nominalisation with both a process sense and a result sense, which was the actual source of the naming clash; "Text Tag" names the object without colliding with the activity name.
+
+**Decision:** "Batch" terminology resolved as a split rather than a uniform rename: the Streamlit tab is renamed from "Batches"/"Batch Processing" to "Outputs" (short) / "Create Outputs" (long); `Run Selected`, `Run Batch`, `Run All`, and the internal batch-processing concept are unchanged.
+**Rationale:** User's proposal — "batch" is machine-logical (a batch of 1 or of all is still a batch computationally) but a poor human-facing label for a tab whose purpose is producing reports, not literally "batching." `Run Batch` specifically was confirmed to stay as-is on the grounds that it is precisely the case where a human does mean "batch" — neither one (Run Selected) nor all (Run All).
+
+**Decision:** The Submission/Unit rename boundary is drawn at the point of data ingestion: `api_client.py`'s `get_submissions()` function and the raw API JSON keys it reads (`submissionId`, `submissionCode`, `submissionName`) keep "submission" naming; everything from the point `app.py`'s New Workfile flow copies that data into `WorkfileState` onward uses "unit" naming (`unit_id`, `unit_code`, `unit_name`, `WorkfileState.units`, `units.csv`, `selected_unit_id`).
+**Rationale:** User's explicit ruling, given as "normalisation" — the external API genuinely deals in submissions; the internal, normalised representation ChartGen builds from that data is the standardised Unit concept. This mirrors the codebase's existing normalisation principle (raw API data → canonical internal shapes) rather than introducing a new pattern.
+
+**Decision:** Fields describing the submission event itself rather than unit identity — `submission_year`, `submission_level`, `submission_service_count` — were left unrenamed even though they live in the same row as the renamed identity fields.
+**Rationale:** These describe *when*/*at what level*/*how much* was submitted, not *who* the unit is. "Submission" remains an accurate word for the event; only the identity fields (id/code/name) were in scope for the Unit rename.
+
+**Decision:** `WorkfileState.submissions` renamed to `.units`, and the stored `submissions.csv` renamed to `units.csv`.
+**Rationale:** Direct consequence of the Submission/Unit boundary decision above — confirmed explicitly with the user as two follow-on structural questions the field-level rename didn't answer on its own.
+
+**Decision:** `settings["selected_submission_id"]` renamed to `selected_unit_id`.
+**Rationale:** Sits on the same identity pattern as `submission_id`/`code`/`name` and is used throughout the Select and Outputs tabs to mean "which unit is currently selected" — confirmed with the user as an extension of the same boundary rather than a separate naming decision.
+
+**Decision:** Downstream prose using "submission" to mean "reporting unit" (rather than the act of submitting) was also renamed for consistency, even though not explicitly named in the original Refactoring Issues text — "Multiple submissions from same org" → "Multiple units from same org" (Feature List), "Multi-submission table expansion" → "Multi-unit table expansion" (Feature List, Functional Spec §11.2).
+**Rationale:** Both describe multiple *units* mapping to one org/table, not multiple submission *events* — the same identity-vs-event distinction that governed the CSV field renames, applied consistently to prose.

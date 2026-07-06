@@ -66,8 +66,8 @@ def _save_settings(s: dict):
     ws.dirty = True
 
 
-def _submissions() -> list:
-    return _ws().submissions
+def _units() -> list:
+    return _ws().units
 
 
 def _manifest() -> dict:
@@ -352,7 +352,7 @@ def _show_new_workfile_form():
             "project_name":            selected_project_name,
             "cleaned_template_path":   "",
             "ppt_template_path":       "",
-            "selected_submission_id":  "",
+            "selected_unit_id":        "",
             "batch_cursor":            "0",
         }
 
@@ -360,15 +360,17 @@ def _show_new_workfile_form():
             {f: row.get(f, "") for f in ORG_FIELDS} for row in org_rows
         ]
 
+        # Pull raw submission rows from the API (external contract: submission_id/code/name)
+        # and normalise into the internal unit-based roster from this point on.
         org_lookup = {str(r["organisation_id"]): r for r in org_rows}
         rows_out = []
         for row in submission_rows:
             services = row.get("services", [])
             org = org_lookup.get(str(row["organisation_id"]), {})
             rows_out.append({
-                "submission_id":            row["submission_id"],
-                "submission_code":          row["submission_code"],
-                "submission_name":          row["submission_name"],
+                "unit_id":                  row["submission_id"],
+                "unit_code":                row["submission_code"],
+                "unit_name":                row["submission_name"],
                 "submission_year":          row.get("submission_year", ""),
                 "project_id":               row.get("project_id", ""),
                 "project_name":             row.get("project_name", ""),
@@ -382,7 +384,7 @@ def _show_new_workfile_form():
                 "service_response_counts": "|".join(str(s["response_count"]) for s in services),
                 "Region()":                org.get("region_name", ""),
             })
-        ws_new.submissions = rows_out
+        ws_new.units = rows_out
 
         ws_new.locked_by = st.session_state["username"]
         write_lock(workfile_path, st.session_state["username"])
@@ -648,9 +650,9 @@ st.title("ChartGen")
 st.caption("Analysis and Reporting software")
 
 (tab_details, tab_config, tab_imports, tab_select,
- tab_text, tab_running_order, tab_charts, tab_batches) = st.tabs([
+ tab_text, tab_running_order, tab_charts, tab_outputs) = st.tabs([
     "Details", "Config", "Imports", "Select",
-    "Text", "Running Order", "Charts", "Batches"
+    "Text", "Running Order", "Charts", "Outputs"
 ])
 
 
@@ -688,29 +690,29 @@ with tab_select:
     import pandas as pd
 
     st.header("Selection & Populations")
-    submissions = _submissions()
+    units = _units()
 
     st.subheader("Select reporting unit")
 
-    if not submissions:
-        st.warning("No submissions loaded.")
+    if not units:
+        st.warning("No units loaded.")
     else:
         display_mode = st.radio(
             "Identify by",
-            options=["Submission name", "Submission code", "Submission ID"],
+            options=["Unit name", "Unit code", "Unit ID"],
             horizontal=True, key="select_display_mode",
         )
 
-        def _submission_label(row):
-            if display_mode == "Submission code":
-                return f"{row['submission_code']}  —  {row['submission_name']}"
-            elif display_mode == "Submission ID":
-                return f"{row['submission_id']}  —  {row['submission_name']}"
+        def _unit_label(row):
+            if display_mode == "Unit code":
+                return f"{row['unit_code']}  —  {row['unit_name']}"
+            elif display_mode == "Unit ID":
+                return f"{row['unit_id']}  —  {row['unit_name']}"
             else:
-                return row["submission_name"]
+                return row["unit_name"]
 
-        label_to_id = {_submission_label(r): r["submission_id"] for r in submissions}
-        saved_unit = _settings().get("selected_submission_id", "")
+        label_to_id = {_unit_label(r): r["unit_id"] for r in units}
+        saved_unit = _settings().get("selected_unit_id", "")
         saved_label = next((lbl for lbl, sid in label_to_id.items() if sid == saved_unit), None)
         unit_index = list(label_to_id.keys()).index(saved_label) if saved_label in label_to_id else None
 
@@ -723,22 +725,22 @@ with tab_select:
         if selected_id:
             if selected_id != saved_unit:
                 s = _settings()
-                s["selected_submission_id"] = str(selected_id)
+                s["selected_unit_id"] = str(selected_id)
                 _save_settings(s)
 
-            selected_row = next((r for r in submissions if r["submission_id"] == selected_id), None)
+            selected_row = next((r for r in units if r["unit_id"] == selected_id), None)
             if selected_row:
                 c1, c2, c3 = st.columns(3)
-                c1.metric("Submission ID",  selected_row["submission_id"])
-                c2.metric("Code",           selected_row["submission_code"])
-                c3.metric("Organisation",   selected_row["organisation_name"])
+                c1.metric("Unit ID",      selected_row["unit_id"])
+                c2.metric("Code",         selected_row["unit_code"])
+                c3.metric("Organisation", selected_row["organisation_name"])
 
     st.divider()
     st.subheader("Populations")
-    st.caption("Item tables define the comparator population.")
+    st.caption("Population tables define the population.")
 
-    def _submissions_to_display_rows(rows: list, expand_services: bool = False) -> list:
-        """Prepare submission rows for display in the Populations table, optionally expanding services into one row each."""
+    def _units_to_display_rows(rows: list, expand_services: bool = False) -> list:
+        """Prepare unit rows for display in the Populations table, optionally expanding services into one row each."""
         if not expand_services:
             return rows
 
@@ -760,9 +762,9 @@ with tab_select:
                     })
         return expanded
 
-    with st.expander("Submissions — item table", expanded=st.session_state.get("pop_expander_open", True)):
-        if not submissions:
-            st.info("No submissions data.")
+    with st.expander("Units — population table", expanded=st.session_state.get("pop_expander_open", True)):
+        if not units:
+            st.info("No unit data.")
         else:
             col_toggle1, col_toggle2 = st.columns([2, 2])
             expand_services = col_toggle1.toggle(
@@ -777,13 +779,13 @@ with tab_select:
             st.session_state["pop_include_org_val"] = include_org
             st.session_state["pop_expander_open"] = True
 
-            display_rows = submissions if include_org else [
-                r for r in submissions if r.get("submission_level", "") != "O"
+            display_rows = units if include_org else [
+                r for r in units if r.get("submission_level", "") != "O"
             ]
-            display_rows = _submissions_to_display_rows(display_rows, expand_services)
+            display_rows = _units_to_display_rows(display_rows, expand_services)
 
             display_cols = [
-                "submission_id", "submission_code", "submission_name",
+                "unit_id", "unit_code", "unit_name",
                 "organisation_name", "response_count", "submission_service_count",
                 "service_item_ids", "service_item_names", "service_response_counts", "Region()",
             ]
@@ -946,19 +948,19 @@ with tab_imports:
 # ---------------------------------------------------------------------------
 
 with tab_text:
-    st.header("Text — Flag Tokens")
+    st.header("Text — Text Tags")
     st.caption(
-        "Add `update_text` rows to the Running Order to replace these tokens "
+        "Add `update_text` rows to the Running Order to replace these text tags "
         "in your PowerPoint template at generation time."
     )
     from modules.m12_local_config.local_config import build_report_context as _brc_text
-    _rc_text = _brc_text(_settings(), _submissions())
-    _preview_value = _rc_text.submission_name if _rc_text else "— no reporting unit selected —"
+    _rc_text = _brc_text(_settings(), _units())
+    _preview_value = _rc_text.unit_name if _rc_text else "— no reporting unit selected —"
 
     st.dataframe(
         {
-            "Token": ["[selected-reporting-unit-name]"],
-            "Replaced with": ["Submission name"],
+            "Text Tag": ["[selected-reporting-unit-name]"],
+            "Replaced with": ["Unit name"],
             "Current value": [_preview_value],
         },
         use_container_width=True, hide_index=True,
@@ -1047,7 +1049,7 @@ with tab_running_order:
 
                 if needs_populations:
                     from modules.m12_local_config.local_config import get_peer_group_columns
-                    _peer_cols = get_peer_group_columns(_submissions())
+                    _peer_cols = get_peer_group_columns(_units())
                     _pop_options = ["All"] + _peer_cols + ["Selected"]
                     current_pop_str = str(row.get("populations", "") or "")
                     if is_insert_chart and not current_pop_str:
@@ -1201,14 +1203,14 @@ with tab_charts:
                 from modules.m06_assembly_engine.assembly_engine import build_population_shapes
                 from modules.m04_data_shapes.shapes import PopulationShape
 
-                _subs = _submissions()
-                _rc = build_report_context(_settings(), _subs)
+                _units_local = _units()
+                _rc = build_report_context(_settings(), _units_local)
                 if _rc:
-                    st.caption(f"Highlighting: **{_rc.submission_code}** — {_rc.submission_name}")
+                    st.caption(f"Highlighting: **{_rc.unit_code}** — {_rc.unit_name}")
 
                 _default_pop = _settings().get("default_populations", "All^Selected") or "All^Selected"
                 try:
-                    _pop_shapes = build_population_shapes(shape, _default_pop, _subs, _rc)
+                    _pop_shapes = build_population_shapes(shape, _default_pop, _units_local, _rc)
                 except Exception:
                     _pop_shapes = []
                 if not _pop_shapes:
@@ -1226,27 +1228,27 @@ with tab_charts:
 
 
 # ---------------------------------------------------------------------------
-# Batches tab
+# Outputs tab
 # ---------------------------------------------------------------------------
 
-with tab_batches:
+with tab_outputs:
     import time as _time
     from modules.m06_assembly_engine.assembly_engine import run_running_order
 
     _s           = _settings()
-    _subs        = _submissions()
+    _subs        = _units()
     _workfile_dir = os.path.dirname(_ws().workfile_path)
     _cleaned_tpl = _s.get("cleaned_template_path", "").strip()
     _tpl         = _s.get("ppt_template_path", "").strip()
     _active_tpl  = _cleaned_tpl if os.path.exists(_cleaned_tpl) else _tpl
-    _sel_id      = str(_s.get("selected_submission_id", "") or "").strip()
-    _sel_row     = next((r for r in _subs if str(r["submission_id"]) == _sel_id), None)
+    _sel_id      = str(_s.get("selected_unit_id", "") or "").strip()
+    _sel_row     = next((r for r in _subs if str(r["unit_id"]) == _sel_id), None)
     _total       = len(_subs)
     _cursor      = min(int(_s.get("batch_cursor", 0)), _total)
     _outputs_dir = os.path.join(_workfile_dir, "outputs")
     _ro_rows     = _ws().running_order_rows
 
-    st.markdown('<h1 style="font-size:1.8em;margin:0 0 4px 0;padding:0;">Process Outputs</h1>'
+    st.markdown('<h1 style="font-size:1.8em;margin:0 0 4px 0;padding:0;">Create Outputs</h1>'
                 '<hr style="border:none;border-top:1px solid #ddd;margin:0 0 6px 0;">', unsafe_allow_html=True)
 
     _issues = []
@@ -1275,7 +1277,7 @@ with tab_batches:
     def _build_rows_to_run():
         return [r for r in _ws().running_order_rows if r["enabled"] == 1]
 
-    def _run_for_submissions(submissions_to_run: list, run_label: str):
+    def _run_for_units(units_to_run: list, run_label: str):
         from modules.m06_assembly_engine.assembly_engine import (
             run_running_order, AssemblyContext, FUNCTION_MAP
         )
@@ -1304,13 +1306,13 @@ with tab_batches:
                 except Exception:
                     pass
 
-        for idx, sub in enumerate(submissions_to_run):
+        for idx, unit in enumerate(units_to_run):
             pop_idx = next((i+1 for i, s in enumerate(_subs)
-                            if str(s["submission_id"]) == str(sub["submission_id"])), idx+1)
+                            if str(s["unit_id"]) == str(unit["unit_id"])), idx+1)
 
             run_settings = dict(_s)
-            run_settings["reporting_unit_name"]    = sub["submission_code"]
-            run_settings["selected_submission_id"] = str(sub["submission_id"])
+            run_settings["reporting_unit_name"] = unit["unit_code"]
+            run_settings["selected_unit_id"]    = str(unit["unit_id"])
             run_settings["cleaned_template_path"]  = _active_tpl
             run_settings["outputs_folder"]         = _outputs_dir
             run_settings["workfile_state"]         = _ws()
@@ -1324,8 +1326,8 @@ with tab_batches:
 
             st.session_state["run_log_rows"].append({
                 "idx":     pop_idx,
-                "code":    sub["submission_code"],
-                "name":    sub["submission_name"],
+                "code":    unit["unit_code"],
+                "name":    unit["unit_name"],
                 "ok":      result["status"] == "ok",
                 "elapsed": result["elapsed"],
                 "error":   err_msg,
@@ -1400,15 +1402,15 @@ with tab_batches:
                 st.markdown(
                     f'<div style="border-left:4px solid #C12958;padding:4px 10px;background:#fdf0f3;border-radius:4px;line-height:1.35;display:inline-block;width:100%;">'
                     f'<span style="color:#C12958;font-weight:700;font-size:0.74em;letter-spacing:0.05em;">SELECTED REPORTING UNIT</span><br>'
-                    f'<span style="font-size:0.92em;font-weight:600;">{_sel_row["submission_name"]}</span><br>'
-                    f'<span style="color:#555;font-size:0.8em;">{_sel_row["submission_code"]} &nbsp;·&nbsp; {_sel_row["organisation_name"]}</span>'
+                    f'<span style="font-size:0.92em;font-weight:600;">{_sel_row["unit_name"]}</span><br>'
+                    f'<span style="color:#555;font-size:0.8em;">{_sel_row["unit_code"]} &nbsp;·&nbsp; {_sel_row["organisation_name"]}</span>'
                     f'</div>', unsafe_allow_html=True,
                 )
             else:
                 st.markdown('<p style="color:#888;font-size:0.83em;margin:4px 0;">No reporting unit selected — go to the Select tab.</p>', unsafe_allow_html=True)
         with _r1r:
             _run_selected = st.button(
-                f"▶  Run Selected{(' — ' + _sel_row['submission_code']) if _sel_row else ''}",
+                f"▶  Run Selected{(' — ' + _sel_row['unit_code']) if _sel_row else ''}",
                 disabled=not _sel_row, use_container_width=True, key="btn_run_selected", type="primary",
             )
 
@@ -1418,7 +1420,7 @@ with tab_batches:
         _r2l, _r2r = st.columns([4, 2])
         with _r2l:
             if _next_sub:
-                st.markdown(f'<p style="font-size:0.81em;color:#444;margin:0;">Next: <strong>{_next_sub["submission_name"]}</strong> ({_next_sub["submission_code"]}) — {_cursor + 1} of {_total}</p>', unsafe_allow_html=True)
+                st.markdown(f'<p style="font-size:0.81em;color:#444;margin:0;">Next: <strong>{_next_sub["unit_name"]}</strong> ({_next_sub["unit_code"]}) — {_cursor + 1} of {_total}</p>', unsafe_allow_html=True)
             else:
                 st.markdown(f'<p style="font-size:0.81em;color:#888;margin:0;">Queue complete — all {_total} reports run.</p>', unsafe_allow_html=True)
             _sl_col, _rs_col = st.columns([3, 2])
@@ -1442,7 +1444,7 @@ with tab_batches:
         st.markdown('<p style="font-weight:600;font-size:0.88em;margin:0 0 2px 0;">Full run</p>', unsafe_allow_html=True)
         _r3l, _r3r = st.columns([4, 2])
         with _r3l:
-            st.markdown(f'<p style="font-size:0.81em;color:#444;margin:4px 0;">All <strong>{_total}</strong> submissions in the population.</p>', unsafe_allow_html=True)
+            st.markdown(f'<p style="font-size:0.81em;color:#444;margin:4px 0;">All <strong>{_total}</strong> units in the population.</p>', unsafe_allow_html=True)
         with _r3r:
             _run_all = st.button(
                 f"▶▶▶  Run All — {_total} reports",
@@ -1456,17 +1458,17 @@ with tab_batches:
         _log_placeholder = st.empty()
 
         if _run_selected and _sel_row:
-            _ok, _err, _elapsed = _run_for_submissions([_sel_row], "Run Selected")
+            _ok, _err, _elapsed = _run_for_units([_sel_row], "Run Selected")
 
         elif _run_batch and _cursor < _total:
             _batch_subs = _subs[_cursor: _cursor + _batch_size]
-            _ok, _err, _elapsed = _run_for_submissions(_batch_subs, f"Run Batch ({len(_batch_subs)})")
+            _ok, _err, _elapsed = _run_for_units(_batch_subs, f"Run Batch ({len(_batch_subs)})")
             _s["batch_cursor"] = str(_cursor + _ok)
             _save_settings(_s)
             st.rerun()
 
         elif _run_all:
-            _ok, _err, _elapsed = _run_for_submissions(_subs, f"Run All ({_total})")
+            _ok, _err, _elapsed = _run_for_units(_subs, f"Run All ({_total})")
             _s["batch_cursor"] = str(_ok)
             _save_settings(_s)
             st.rerun()

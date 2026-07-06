@@ -25,7 +25,7 @@ from modules.m08_insert_from_excel.insert_from_excel import (
 
 
 def build_population_shapes(data_shape, populations_str: str,
-                             submissions: list, report_context) -> list:
+                             units: list, report_context) -> list:
     """
     Build an ordered list of PopulationShape objects from a populations string,
     applying each '^'-delimited token as a sequential intersecting filter.
@@ -35,14 +35,14 @@ def build_population_shapes(data_shape, populations_str: str,
     if not populations_str or not populations_str.strip():
         return []
 
-    # All submission_ids present in the data shape
-    shape_ids = {u.submission_id for u in _get_shape_units(data_shape)}
+    # All unit_ids present in the data shape
+    shape_ids = {u.unit_id for u in _get_shape_units(data_shape)}
     if not shape_ids:
         return []
 
-    # Build a submission lookup for peer group column resolution
-    sub_lookup = {str(r["submission_id"]): r for r in submissions}
-    selected_id = str(report_context.submission_id) if report_context else None
+    # Build a unit lookup for peer group column resolution
+    unit_lookup = {str(r["unit_id"]): r for r in units}
+    selected_id = str(report_context.unit_id) if report_context else None
     selected_org_id = str(report_context.organisation_id) if report_context else None
 
     running_ids = set(shape_ids)  # intersection accumulator
@@ -61,23 +61,23 @@ def build_population_shapes(data_shape, populations_str: str,
             if not selected_org_id:
                 continue
             token_ids = {
-                int(r["submission_id"]) for r in submissions
+                int(r["unit_id"]) for r in units
                 if str(r["organisation_id"]) == selected_org_id
-                and int(r["submission_id"]) in running_ids
+                and int(r["unit_id"]) in running_ids
             }
             label = "Selected"
 
         elif token.endswith("()"):
             col = token
-            if not selected_id or selected_id not in sub_lookup:
+            if not selected_id or selected_id not in unit_lookup:
                 continue
-            group_value = sub_lookup[selected_id].get(col, "")
+            group_value = unit_lookup[selected_id].get(col, "")
             if not group_value:
                 continue
             token_ids = {
-                int(r["submission_id"]) for r in submissions
+                int(r["unit_id"]) for r in units
                 if r.get(col) == group_value
-                and int(r["submission_id"]) in running_ids
+                and int(r["unit_id"]) in running_ids
             }
             label = group_value
 
@@ -96,7 +96,7 @@ def build_population_shapes(data_shape, populations_str: str,
 
 
 def _get_shape_units(data_shape) -> list:
-    """Return the flat list of comparative units from any shape type."""
+    """Return the flat list of units from any shape type."""
     from modules.m04_data_shapes.shapes import (
         NumericSeries, NumericCompositional, CategoricalCompositional
     )
@@ -142,7 +142,7 @@ def create_ppt(ctx: AssemblyContext, row: dict, settings: dict) -> dict:
     output_folder = _ensure_output_folder(settings)
     unit_name = (settings.get("reporting_unit_name") or "").strip()
     if not unit_name:
-        unit_name = str(settings.get("selected_submission_id") or "output").strip()
+        unit_name = str(settings.get("selected_unit_id") or "output").strip()
     safe_name = _safe_filename(unit_name)
     output_path = os.path.join(output_folder, "pptx", f"{safe_name}.pptx")
 
@@ -207,10 +207,10 @@ def insert_chart(ctx: AssemblyContext, row: dict, settings: dict) -> dict:
     population_shapes = []
     if render_context is not None and populations_str:
         workfile_state = settings.get("workfile_state")
-        submissions = workfile_state.submissions
+        units = workfile_state.units
         try:
             population_shapes = build_population_shapes(
-                data_shape, populations_str, submissions, render_context
+                data_shape, populations_str, units, render_context
             )
         except Exception as e:
             return _err(row, f"insert_chart: failed to build population shapes: {e}")
@@ -245,8 +245,8 @@ def insert_chart(ctx: AssemblyContext, row: dict, settings: dict) -> dict:
 
 def update_text(ctx: AssemblyContext, row: dict, settings: dict) -> dict:
     """
-    Replace flag tokens in the presentation with values for the current reporting unit.
-    Tokens: [selected-reporting-unit-name] → submission_name.
+    Replace text tags in the presentation with values for the current reporting unit.
+    Tags: [selected-reporting-unit-name] → unit_name.
     """
     if ctx.prs is None:
         return _err(row, "update_text: no open presentation (create_ppt not called?).")
@@ -254,10 +254,10 @@ def update_text(ctx: AssemblyContext, row: dict, settings: dict) -> dict:
     rc = ctx.report_context
     tokens = {}
     if rc:
-        tokens["[selected-reporting-unit-name]"] = rc.submission_name or ""
+        tokens["[selected-reporting-unit-name]"] = rc.unit_name or ""
 
     if not tokens:
-        return _ok(row, "update_text: no tokens to replace (no ReportContext).")
+        return _ok(row, "update_text: no tags to replace (no ReportContext).")
 
     # XML namespace for DrawingML text runs
     _nsmap = "a"
@@ -275,13 +275,13 @@ def update_text(ctx: AssemblyContext, row: dict, settings: dict) -> dict:
                 if not runs:
                     continue
 
-                # Check whether the full paragraph text contains any token
+                # Check whether the full paragraph text contains any tag
                 full_text = "".join(r.text for r in runs)
                 needs_replace = any(tok in full_text for tok in tokens)
                 if not needs_replace:
                     continue
 
-                # Apply all token replacements to the full paragraph text
+                # Apply all tag replacements to the full paragraph text
                 replaced = full_text
                 for token, value in tokens.items():
                     if token in replaced:
@@ -399,8 +399,8 @@ def run_running_order(rows: list[dict], settings: dict,
         ctx = AssemblyContext()
 
     workfile_state = settings.get("workfile_state")
-    submissions = workfile_state.submissions
-    ctx.report_context = build_report_context(settings, submissions)
+    units = workfile_state.units
+    ctx.report_context = build_report_context(settings, units)
 
     t_start = time.perf_counter()
 

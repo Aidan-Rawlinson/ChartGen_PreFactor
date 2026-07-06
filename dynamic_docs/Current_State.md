@@ -1,12 +1,17 @@
 <!-- Purpose: A snapshot of where the project stands right now -- what works, what is in progress, what is broken. Rewritten by Claude each session. -->
 
-## Status: In Progress — Session 4 complete (Refactoring Issues Session 10, resequenced ahead of Session 3)
+## Status: In Progress — Refactoring Issues Session 3 (Remaining terminology renames) complete
 
-**Codebase:** `code_base/chartgen/` — Refactoring Issues Session 10 (Docstring protocol and review) is done, executed ahead of Session 3 at the user's request. A docstring protocol was agreed: a docstring states only identity — what a module/function is or does — never mechanics, rationale, design intent, roadmap language, or cross-references to other documents or constants. Length target is 1 sentence, 2 with strong justification. One deliberate exception: untyped dict/row contracts with no type defined elsewhere (API response shapes, Running Order row fields, yellow-box classification, the populations-string token legend) are kept in docstrings since cutting them loses information with no other home. Dataclass field-position/semantics documentation (e.g. `values[i]` correspondence, `PopulationShape.role` string-value meaning) did **not** get the same exception and was cut. Every module and function docstring across all 17 files in `code_base/chartgen/` (`app.py` plus every module under `modules/`, excluding `chart_type_map.py` which was already compliant) was reviewed and rewritten to this policy — no logic changes, docstrings only. This reverses the Session 1 `running_order.py` docstring pattern, which had cross-referenced Architecture/Functional Spec; that is no longer the approach. One disputed factual claim in `running_order.py`'s `read_xlsx` docstring (whether it actually skips `enabled == 0` rows) was raised and, per the user's instruction, left untouched with no special handling.
+**Codebase:** `code_base/chartgen/` — all five Session 3 terminology items executed:
+- `ComparativeUnit` (and its use in docstrings/UI as "comparative unit"/"comparative population") renamed to plain **Unit**/**Population** throughout `m04_data_shapes/shapes.py` and elsewhere. The stray "comparator population" string in the `app.py` Populations caption corrected.
+- "Item table" renamed to **Population table** (the `app.py` expander label is now "Units — population table").
+- "Submission" / `submission_id` / `submission_code` renamed to Unit-based terminology, with a deliberate boundary: `api_client.py`'s `get_submissions()` and the raw API JSON keys (`submissionId`, `submissionCode`, `submissionName`) are untouched — that's the external contract. Everything from the point of ingestion onward uses `unit_id`/`unit_code`/`unit_name`: `WorkfileState.units` (was `.submissions`), `units.csv` (was `submissions.csv`), `ReportContext`, the `Unit` data-shape fields, settings key `selected_unit_id` (was `selected_submission_id`). Fields describing the submission event itself rather than unit identity (`submission_year`, `submission_level`, `submission_service_count`) were left unrenamed. Downstream wording also updated for consistency ("Multiple units from same org", "Multi-unit table expansion").
+- "Flag token" renamed to **Text Tag** throughout code and documentation.
+- "Batch" terminology resolved as a split: the Streamlit tab renamed from "Batches"/"Batch Processing" to **Outputs** (short) / **Create Outputs** (long); `Run Selected`/`Run Batch`/`Run All` and the internal batch-processing concept are unchanged, since "batch" is the correct word for the machine-level loop and "Run Batch" is the one place a human genuinely means "more than one, less than all."
 
-**Documentation:** `Refactoring_issues_known.md` is the only one of the seven reference documents that changed this session — Session 10 marked done with the policy writeup, and a new Part 2 item added on whether untyped dict/row structures should become typed (dataclasses/TypedDicts) for accountability, given the vibe-coded origin of the codebase. Written to the mirror. Primer, Architecture, Functional Spec, Feature List, Glossary, and the Docs Maintenance Guide were not touched this session.
+**Documentation:** All five of the six reference documents that could be affected were updated with targeted edits (not rewrites), per the Docs Maintenance Guide's routing table: Glossary, Functional Spec, Architecture, Feature List, and Refactoring Issues (Session 3 marked done, in the same strikethrough style as Sessions 1/2/10; Part 2's stale references to `SUBMISSIONS_FIELDNAMES`/`ComparativeUnit`/`_submission_label` updated to the new names). Primer and the Docs Maintenance Guide were not touched. All written to the mirror.
 
-**Git:** Repository initialised on `C:\mcp_projects\ChartGen_PreFactor`, remote linked, initial commit and push completed. Sessions 1–3 (Progression_Log numbering) work has since been committed in prior close-downs; this session's work (Progression_Log Session 4) is committed as part of this close-down.
+**Git:** Repository on `C:\mcp_projects\ChartGen_PreFactor`. This session's work (Progression_Log Session 5) is committed as part of this close-down.
 
 ## Planned session breakdown (ChartGen_PreFactor scope)
 
@@ -14,7 +19,7 @@
 |---|---|---|
 | 1 | Quick wins — dead code + doc-only fixes | **Complete** |
 | 2 | Workfile rename | **Complete** |
-| 3 | Remaining terminology renames | Not started |
+| 3 | Remaining terminology renames | **Complete** |
 | 4 | Population stacking & explicit-value tokens | Not started |
 | 5 | PopulationShape redesign | Not started |
 | 6 | Concurrency review | Not started |
@@ -23,4 +28,4 @@
 | 9 | Strip module numbering from code_base | Not started |
 | 10 | Docstring protocol and review | **Complete** (resequenced ahead of Session 3) |
 
-Items passed to the main refactor (not in this project's scope): type coercion at the CSV/WorkfileState boundary, whether untyped dict/row contracts should become typed structures (new this session), multi-project/multi-database support, `.cgw` file association and installer, Text Engine/Batch Controller module split, modular structure discussion (incl. nested sub-packages such as `chart_engine/tweaks/`, and `m15_insertions`), finding a permanent home for `constants_temp`, and a full content review of `app.py`.
+Items passed to the main refactor (not in this project's scope): type coercion at the CSV/WorkfileState boundary, whether untyped dict/row contracts should become typed structures, multi-project/multi-database support, `.cgw` file association and installer, Text Engine/Batch Controller module split, modular structure discussion (incl. nested sub-packages such as `chart_engine/tweaks/`, and `m15_insertions`), finding a permanent home for `constants_temp`, and a full content review of `app.py`.

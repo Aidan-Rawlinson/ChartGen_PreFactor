@@ -112,25 +112,25 @@ MyWorkfile.cgw  (ZIP)
 
 - **Enabled column** — the per-row on/off switch in the Running Order. Stored as an integer `1`/`0` at runtime.
 
-- **Flag token** — a placeholder string embedded in template text (e.g. `[selected-reporting-unit-name]`) replaced with a per-unit value at generation time by `update_text`.
-
 - **Running Order** — the user-authored, row-based instruction table that defines report assembly: function, parameters, control flag. See Functional Spec, Section 9, and the Architecture document, Decision 1, for storage format.
 
 - **Scope (`normal` / `batch_open` / `batch_close`)** — the Running Order column controlling when a row executes relative to a batch: once per report (`normal`), once before the whole batch (`batch_open`, e.g. `open_excel`), or once after (`batch_close`, e.g. `close_excel`).
+
+- **Text Tag** — a placeholder string embedded in template text (e.g. `[selected-reporting-unit-name]`) replaced with a per-unit value at generation time by `update_text`.
 
 ### Cluster 9 — Runtime objects
 
 - **AssemblyContext** — the in-memory object the Assembly Engine builds once per batch run, carrying the open `Presentation` object, output path, run log, autotable stats, the current `ReportContext`, default populations string, and any open Excel COM workbook references. See the Architecture document, Section 5.
 
-- **Item table** — the submissions-based table the user interacts with to select a reporting unit and inspect populations; built from `submissions.csv`.
+- **Population table** — the unit-based table the user interacts with to select a reporting unit and inspect populations; built from `units.csv`.
 
-- **ReportContext** — the per-report identity object (`submission_id`, `submission_code`, `submission_name`, `organisation_id`, `organisation_name`), rebuilt fresh for each submission in a batch run and passed to chart rendering and text replacement.
+- **ReportContext** — the per-report identity object (`unit_id`, `unit_code`, `unit_name`, `organisation_id`, `organisation_name`), rebuilt fresh for each unit in a batch run and passed to chart rendering and text replacement.
 
-- **Submission / submission ID / submission code** — a single reporting unit's data record for a project. `submission_id` is the internal numeric identifier; `submission_code` is the outward-facing label (used for display only, never relied on for logic); `submission_name` is the display name (e.g. Trust name).
+- **Unit / unit ID / unit code** — the identifier fields for a single reporting unit, resolved from the API's submission data at workfile setup and used throughout ChartGen from that point on. `unit_id` is the internal numeric identifier; `unit_code` is the outward-facing label (used for display only, never relied on for logic); `unit_name` is the display name (e.g. Trust name). See Data Acquisition, Functional Spec §7.2.
 
 ### Cluster 10 — Chart construction
 
-- **Autotable** — a table populated from statistics computed as a byproduct of chart construction (mean, quartiles, peer averages, and the value(s) for the selected unit(s)), rather than from flag token replacement. Distinct from flag-based tables.
+- **Autotable** — a table populated from statistics computed as a byproduct of chart construction (mean, quartiles, peer averages, and the value(s) for the selected unit(s)), rather than from text tag replacement. Distinct from text-tag-based tables.
 
 - **Base Chart** — one of ChartGen's chart-rendering functions, each handling one canonical data shape.
 
@@ -138,4 +138,4 @@ MyWorkfile.cgw  (ZIP)
 
 ### Cluster 11 — Excel integration
 
-- **Driver range / export range** — Excel named ranges used by `insert_from_excel`: the driver range receives the current `submission_id`; the export range is the area captured as an image afterwards.
+- **Driver range / export range** — Excel named ranges used by `insert_from_excel`: the driver range receives the current `unit_id`; the export range is the area captured as an image afterwards.

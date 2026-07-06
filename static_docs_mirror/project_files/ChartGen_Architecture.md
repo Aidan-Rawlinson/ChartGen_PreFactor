@@ -84,7 +84,7 @@ MyWorkfile.cgw  (ZIP)
 ├── workfile_config/
 │   ├── settings.csv
 │   ├── urls.csv
-│   ├── submissions.csv
+│   ├── units.csv
 │   ├── organisations.csv
 │   └── running_order.csv
 ├── data_cache/
@@ -99,7 +99,7 @@ MyWorkfile.cgw  (ZIP)
 |---|---|
 | `workfile_config/settings.csv` | key,value — paths, year, project_id, batch_cursor, etc. |
 | `workfile_config/urls.csv` | Toolkit URLs (populated by yellow-box extraction) |
-| `workfile_config/submissions.csv` | Item table — one row per reporting unit, `Region()` column |
+| `workfile_config/units.csv` | Population table — one row per reporting unit, `Region()` column |
 | `workfile_config/organisations.csv` | Organisation reference data (resolves `Region()`) |
 | `workfile_config/running_order.csv` | ★ Canonical Running Order store — flat table, not `.xlsx`. The `.xlsx` is generated from this on demand for download and parsed back into it on upload; it is never itself written to this archive |
 | `data_cache/manifest.json` | Index: tier_id, group, option, label, shape_type, url, last_fetched — per cached chart |
@@ -123,7 +123,7 @@ MyWorkfile.cgw  (ZIP)
 | `image_path` | Source image path for `insert_picture`; may contain `[code]`/`[id]` tokens |
 | `excel_path` | Workbook path for `open_excel` / `insert_from_excel` / `close_excel` |
 | `export_range` | Excel named range captured as an image by `insert_from_excel` |
-| `driver_range` | Excel named range receiving the current `submission_id` |
+| `driver_range` | Excel named range receiving the current `unit_id` |
 | `left_emu` | Left position in EMU — populated from template |
 | `top_emu` | Top position in EMU — populated from template |
 | `width_emu` | Width in EMU — populated from template |
@@ -145,7 +145,7 @@ outputs/
 | `outputs/pptx/` | Generated `.pptx` reports, one per batch run output. Recreated fresh wherever the `.cgw` currently lives, including after a Save As — not carried across |
 | `outputs/pdf/` | Generated `.pdf` reports. Recreated fresh wherever the `.cgw` currently lives, including after a Save As — not carried across |
 
-**CSV vs JSON.** `running_order.csv`, `submissions.csv`, `organisations.csv`: flat, fixed-column, one-row-per-entity — CSV's natural shape, and legible to a non-technical colleague who renames `.cgw` to `.zip`. `data_cache/*.json`: nested (serialised dataclasses), never hand-edited. Intentional split, not an inconsistency.
+**CSV vs JSON.** `running_order.csv`, `units.csv`, `organisations.csv`: flat, fixed-column, one-row-per-entity — CSV's natural shape, and legible to a non-technical colleague who renames `.cgw` to `.zip`. `data_cache/*.json`: nested (serialised dataclasses), never hand-edited. Intentional split, not an inconsistency.
 
 ---
 
@@ -159,7 +159,7 @@ Streamlit process (st.session_state)
 │     workfile_path, workfile_name
 │     settings: dict
 │     urls: list[dict]
-│     submissions: list[dict]
+│     units: list[dict]
 │     organisations: list[dict]
 │     running_order_rows: list[dict]
 │     manifest: dict
@@ -186,9 +186,9 @@ Streamlit process (st.session_state)
     │     excel_workbooks: dict
     │
     ├── ReportContext
-    │     submission_id: int
-    │     submission_code: str
-    │     submission_name: str
+    │     unit_id: int
+    │     unit_code: str
+    │     unit_name: str
     │     organisation_id: str
     │     organisation_name: str
     │
@@ -212,7 +212,7 @@ Streamlit process (st.session_state)
 | `AssemblyContext` | One per **batch** (persists across reports within it) |
 | `AssemblyContext.report_context: ReportContext` | Rebuilt per report, see below |
 | `AssemblyContext.excel_workbooks: dict` | Added dynamically by `open_excel`, Insert From Excel |
-| `ReportContext` | One per **report** (rebuilt fresh per submission, from the per-report settings dict, never from `load_settings()` — batch overrides apply correctly) |
+| `ReportContext` | One per **report** (rebuilt fresh per unit, from the per-report settings dict, never from `load_settings()` — batch overrides apply correctly) |
 | `list[PopulationShape]` | One list per `insert_chart` call — built fresh by `build_population_shapes()` each time, never cached or reused |
 | `PopulationShape.role: str` | e.g. `"All"`, `"Region()"`, `"Selected"` |
 | `PopulationShape.label: str` | Resolved value, e.g. `"London"` |

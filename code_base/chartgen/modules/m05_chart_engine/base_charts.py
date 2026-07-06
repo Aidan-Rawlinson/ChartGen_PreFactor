@@ -92,9 +92,9 @@ def _resolve_unit_colours(units: list, population_shapes: list) -> list:
         colour = HIGHLIGHT if ps.role == "Selected" else PEER_COLOURS[peer_colour_idx % len(PEER_COLOURS)]
         if ps.role != "Selected":
             peer_colour_idx += 1
-        ids = {u.submission_id for u in ps.shape.units}
+        ids = {u.unit_id for u in ps.shape.units}
         for i, u in enumerate(units):
-            if u.submission_id in ids:
+            if u.unit_id in ids:
                 colours[i] = colour
     return colours
 
@@ -116,11 +116,11 @@ def _population_legend_handles(population_shapes: list, data_label: str) -> list
 
 
 def _get_selected_unit(units: list, report_context) -> tuple:
-    """Return (index, value, unit) for the selected submission in a sorted unit list."""
+    """Return (index, value, unit) for the selected unit in a sorted unit list."""
     if report_context is None:
         return None, None, None
     for i, u in enumerate(units):
-        if u.submission_id == report_context.submission_id:
+        if u.unit_id == report_context.unit_id:
             return i, u.values[0], u
     return None, None, None
 
@@ -129,9 +129,9 @@ def _autotable_with_selection(stats: dict, report_context, selected_value) -> di
     if report_context is None:
         return stats
     out = dict(stats)
-    out["Selected ID"]    = report_context.submission_id
-    out["Selected code"]  = report_context.submission_code
-    out["Selected name"]  = report_context.submission_name
+    out["Selected ID"]    = report_context.unit_id
+    out["Selected code"]  = report_context.unit_code
+    out["Selected name"]  = report_context.unit_name
     out["Selected value"] = round(selected_value, 1) if selected_value is not None else None
     return out
 
@@ -147,7 +147,7 @@ def ranked_column(population_shapes: list, width=80, height=50, tweaks=[], repor
     fig, ax = plt.subplots(figsize=(w, h))
     ms = base.metric_stats[0]
     units = sorted(base.units, key=lambda u: (u.values[0] is None, -(u.values[0] or 0)))
-    codes  = [u.submission_code for u in units]
+    codes  = [u.unit_code for u in units]
     values = [u.values[0] if u.values[0] is not None else 0 for u in units]
     x = np.arange(len(codes))
 
@@ -156,7 +156,7 @@ def ranked_column(population_shapes: list, width=80, height=50, tweaks=[], repor
 
     sel_idx, sel_val, _ = _get_selected_unit(units, report_context)
     if sel_idx is not None and sel_val is not None:
-        ax.annotate(report_context.submission_code,
+        ax.annotate(report_context.unit_code,
                     xy=(sel_idx, sel_val), xytext=(0, 6), textcoords="offset points",
                     ha="center", fontsize=7, color=HIGHLIGHT, fontweight="bold")
 
@@ -208,7 +208,7 @@ def dot_strip(population_shapes: list, width=80, height=40, tweaks=[], report_co
 
     sel_idx, sel_val, _ = _get_selected_unit(units, report_context)
     if sel_idx is not None and sel_val is not None:
-        ax.annotate(report_context.submission_code,
+        ax.annotate(report_context.unit_code,
                     xy=(sel_idx, sel_val), xytext=(0, 8), textcoords="offset points",
                     ha="center", fontsize=7, color=HIGHLIGHT, fontweight="bold")
 
@@ -270,14 +270,14 @@ def box_whisker(population_shapes: list, width=50, height=50, tweaks=[], report_
                 ax.axhline(sv, color=HIGHLIGHT, linewidth=1, linestyle=":", zorder=5, alpha=0.6)
                 extra_handles.append(plt.Line2D([0],[0], marker="D", color="w",
                     markerfacecolor=HIGHLIGHT, markersize=7,
-                    label=f"{report_context.submission_code}: {sv:g}" if report_context else "Selected"))
+                    label=f"{report_context.unit_code}: {sv:g}" if report_context else "Selected"))
         else:
             colour = PEER_COLOURS[peer_colour_idx % len(PEER_COLOURS)]
             peer_colour_idx += 1
             peer_vals = [u.values[0] for u in ps.shape.units if u.values[0] is not None]
             if peer_vals and report_context:
                 sel_in_peer = next((u.values[0] for u in ps.shape.units
-                                    if u.submission_id == report_context.submission_id
+                                    if u.unit_id == report_context.unit_id
                                     and u.values[0] is not None), None)
                 if sel_in_peer is not None:
                     ax.scatter([1], [sel_in_peer], color=colour, zorder=6, s=60, marker="D", alpha=0.85)
@@ -335,7 +335,7 @@ def frequency_histogram(population_shapes: list, width=60, height=45, tweaks=[],
             if sel_vals and report_context:
                 sv = sel_vals[0]
                 ax.axvline(sv, color=HIGHLIGHT, linewidth=2, linestyle="--", zorder=4,
-                           label=f"{report_context.submission_code}: {sv:g}")
+                           label=f"{report_context.unit_code}: {sv:g}")
         else:
             colour = PEER_COLOURS[peer_colour_idx % len(PEER_COLOURS)]
             peer_colour_idx += 1
@@ -392,13 +392,13 @@ def violin_plot(population_shapes: list, width=50, height=50, tweaks=[], report_
                 ax.axhline(sv, color=HIGHLIGHT, linewidth=1, linestyle=":", zorder=5, alpha=0.6)
                 extra_handles.append(plt.Line2D([0],[0], marker="D", color="w",
                     markerfacecolor=HIGHLIGHT, markersize=7,
-                    label=f"{report_context.submission_code}: {sv:g}"))
+                    label=f"{report_context.unit_code}: {sv:g}"))
         else:
             colour = PEER_COLOURS[peer_colour_idx % len(PEER_COLOURS)]
             peer_colour_idx += 1
             if report_context:
                 sel_in_peer = next((u.values[0] for u in ps.shape.units
-                                    if u.submission_id == report_context.submission_id
+                                    if u.unit_id == report_context.unit_id
                                     and u.values[0] is not None), None)
                 if sel_in_peer is not None:
                     ax.scatter([1], [sel_in_peer], color=colour, zorder=6, s=60, marker="D", alpha=0.85)
@@ -461,7 +461,7 @@ def ugly_bar(population_shapes: list, width=80, height=40, tweaks=[], report_con
     _apply_spine_style(ax)
     handles = [
         mpatches.Patch(color=BAR_BLUE,  label="Sample Average"),
-        mpatches.Patch(color="#AAAAAA", label="Submission"),
+        mpatches.Patch(color="#AAAAAA", label="Unit"),
     ]
     ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.15),
               ncol=2, fontsize=7, frameon=False)

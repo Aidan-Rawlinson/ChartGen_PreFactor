@@ -81,12 +81,12 @@ Structured in pipeline order: application/session foundations, then workfile set
 
 | Feature | Readiness | Notes |
 |---|---|---|
-| Reporting units + identifiers | Complete | Fetched from API at workfile setup; stored as `submissions.csv`. |
+| Reporting units + identifiers | Complete | Fetched from API at workfile setup; stored as `units.csv`. |
 | Organisation reference data (`organisations.csv`) | Complete | Fetched from `GET /organisations?year={year}`; used to resolve peer group columns at save time. |
-| Peer group assignments — `Region()` | Complete | Resolved at workfile creation, written permanently into `submissions.csv`. |
+| Peer group assignments — `Region()` | Complete | Resolved at workfile creation, written permanently into `units.csv`. |
 | Additional peer group columns (`Name()`) | Partial | Empty-bracket tokens (`Region()`) fully supported end-to-end: column discovery, Running Order multi-select, and resolution to the selected unit's own group. Explicit-value tokens (`Region(Wales)`) are not implemented — silently skipped at resolution. |
 | Binary peer group columns (flag columns) | Not built | Resolution logic for `1`/`0` membership columns not yet implemented in `build_population_shapes`. |
-| Multi-level hierarchy model | Not built | Current model uses a single flat comparator population. |
+| Multi-level hierarchy model | Not built | Current model uses a single flat population. |
 
 ---
 
@@ -121,7 +121,7 @@ Structured in pipeline order: application/session foundations, then workfile set
 | `save_ppt` | Complete | |
 | `save_pdf` | Complete | Disabled by default in generated Running Orders. |
 | `set_default_populations` | Complete | |
-| `update_text` | Partial | See Flag token replacement, Part 5. |
+| `update_text` | Partial | See Text tag replacement, Part 5. |
 | `insert_picture` | Complete | `[code]`/`[id]` token substitution; aspect ratio preserved. |
 | Insert Content From Excel | Complete | Requires `pywin32`. Implemented via three functions: `open_excel`, `insert_from_excel`, `close_excel`. |
 | `table_data_lift` | Not built | |
@@ -146,7 +146,7 @@ Structured in pipeline order: application/session foundations, then workfile set
 | Selection identity in autotable stats (all 17 charts) | Complete | |
 | Peer group as visualisation layer (peer token following `All`) | Complete | Full population retained; the peer group is rendered as an additional layer. Per-chart rendering of layers is prototype-level. |
 | Autotable populations (separate from chart populations) | Not built | No `table_populations` field exists on `insert_chart` rows. |
-| Multiple submissions from same org (distinct colour) | Not built | |
+| Multiple units from same org (distinct colour) | Not built | |
 | Tweaks — reference lines (`add_line`, `Add_Line_Label`) | Not built | |
 | Tweaks — axis control (min/max, unit, format) | Not built | Needed to produce interpretable charts. |
 | Tweak hook architecture (3 intervention points) | Not built | Design settled, but not yet implemented in code. |
@@ -160,9 +160,9 @@ Structured in pipeline order: application/session foundations, then workfile set
 
 | Feature | Readiness | Notes |
 |---|---|---|
-| Flag-based table population (basic tables) | Not built | Depends on flag token replacement, which is built. |
+| Text-tag-based table population (basic tables) | Not built | Depends on text tag replacement, which is built. |
 | Autotables (statistics from chart construction) | Partial | Statistics are computed and stored on `AssemblyContext` as a byproduct of `insert_chart`; the functions to populate a table from them are not yet implemented. |
-| Multi-submission table expansion | Not built | |
+| Multi-unit table expansion | Not built | |
 
 ---
 
@@ -170,9 +170,9 @@ Structured in pipeline order: application/session foundations, then workfile set
 
 | Feature | Readiness | Notes |
 |---|---|---|
-| Flag token replacement (`[org]`, `[region]` etc.) | Partial | Presentation-wide, single-pass, handles tokens split across runs. Table cells are not yet covered — `shape.table` cells are currently skipped. |
-| Pre-scan template for flag positions | Not built | Flag tokens are located per report by walking the presentation at generation time; no upfront scan or stored map exists. |
-| Conditional text (formula-driven flag values) | Not built | |
+| Text tag replacement (`[org]`, `[region]` etc.) | Partial | Presentation-wide, single-pass, handles tokens split across runs. Table cells are not yet covered — `shape.table` cells are currently skipped. |
+| Pre-scan template for tag positions | Not built | Text tags are located per report by walking the presentation at generation time; no upfront scan or stored map exists. |
+| Conditional text (formula-driven tag values) | Not built | |
 
 ---
 

@@ -29,7 +29,7 @@ class WorkfileState:
     # workfile_config/
     settings: dict = field(default_factory=dict)
     urls: list = field(default_factory=list)          # list of {url, label}
-    submissions: list = field(default_factory=list)   # list of dicts
+    units: list = field(default_factory=list)         # list of dicts
     organisations: list = field(default_factory=list) # list of dicts
     running_order_rows: list = field(default_factory=list)  # list of dicts (CSV rows)
 
@@ -146,7 +146,7 @@ def open_workfile(workfile_path: str) -> WorkfileState:
         # workfile_config/
         state.settings         = _key_value_csv_to_dict(_read("workfile_config/settings.csv"))
         state.urls             = _url_csv_to_list(_read("workfile_config/urls.csv"))
-        state.submissions      = _csv_to_rows(_read("workfile_config/submissions.csv"))
+        state.units            = _csv_to_rows(_read("workfile_config/units.csv"))
         state.organisations    = _csv_to_rows(_read("workfile_config/organisations.csv"))
         state.running_order_rows = _csv_to_rows(_read("workfile_config/running_order.csv"))
         for _row in state.running_order_rows:
@@ -243,7 +243,7 @@ def save_workfile(state: WorkfileState, username: str, target_path: str = None):
     target_path overrides state.workfile_path (used by Save As).
     """
     from modules.constants_temp.constants_temp import (
-        SUBMISSIONS_FIELDNAMES as SUB_FIELDS, ORGANISATIONS_FIELDNAMES as ORG_FIELDS
+        UNITS_FIELDNAMES as UNIT_FIELDS, ORGANISATIONS_FIELDNAMES as ORG_FIELDS
     )
 
     now = datetime.now(timezone.utc).isoformat()
@@ -259,8 +259,8 @@ def save_workfile(state: WorkfileState, username: str, target_path: str = None):
         # workfile_config/
         _write("workfile_config/settings.csv",      _dict_to_key_value_csv(state.settings))
         _write("workfile_config/urls.csv",           _url_list_to_csv(state.urls))
-        _write("workfile_config/submissions.csv",
-               _rows_to_csv(state.submissions, SUB_FIELDS) if state.submissions else "")
+        _write("workfile_config/units.csv",
+               _rows_to_csv(state.units, UNIT_FIELDS) if state.units else "")
         _write("workfile_config/organisations.csv",
                _rows_to_csv(state.organisations, ORG_FIELDS) if state.organisations else "")
 
@@ -310,7 +310,7 @@ def save_workfile(state: WorkfileState, username: str, target_path: str = None):
 def new_workfile(workfile_path: str, workfile_name: str) -> WorkfileState:
     """
     Create a blank WorkfileState and write an empty .cgw to disk.
-    Caller populates settings / submissions / etc. before first save.
+    Caller populates settings / units / etc. before first save.
     """
     state = WorkfileState(
         workfile_path=workfile_path,
@@ -329,7 +329,7 @@ def _write_empty_cgw(workfile_path: str, workfile_name: str):
         for name in [
             "workfile_config/settings.csv",
             "workfile_config/urls.csv",
-            "workfile_config/submissions.csv",
+            "workfile_config/units.csv",
             "workfile_config/organisations.csv",
             "workfile_config/running_order.csv",
             "data_cache/manifest.json",

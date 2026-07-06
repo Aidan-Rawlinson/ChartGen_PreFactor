@@ -129,7 +129,7 @@ def close_excel(ctx, row: dict, settings: dict) -> dict:
 
 def insert_from_excel(ctx, row: dict, settings: dict) -> dict:
     """
-    Write submission_id to the driver range (if specified), force workbook
+    Write unit_id to the driver range (if specified), force workbook
     recalculation, capture the export range as a PNG, and insert into the
     presentation at the placeholder position.
 
@@ -169,7 +169,7 @@ def insert_from_excel(ctx, row: dict, settings: dict) -> dict:
     if driver_range:
         try:
             driver_cell = wb.Names(driver_range).RefersToRange
-            driver_cell.Value = ctx.report_context.submission_id
+            driver_cell.Value = ctx.report_context.unit_id
         except Exception as e:
             return _err(row, f"insert_from_excel: could not write to driver range "
                              f"'{driver_range}': {e}")

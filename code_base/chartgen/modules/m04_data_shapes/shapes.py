@@ -8,14 +8,14 @@ from typing import Optional
 
 
 # ---------------------------------------------------------------------------
-# Shared: comparative unit entry base
+# Shared: unit entry base
 # ---------------------------------------------------------------------------
 
 @dataclass
-class ComparativeUnit:
+class Unit:
     """Identity fields shared by all per-unit entries across all shapes."""
-    submission_code: str
-    submission_id:   int
+    unit_code: str
+    unit_id:   int
 
 
 # ---------------------------------------------------------------------------
@@ -26,7 +26,7 @@ class ComparativeUnit:
 class ShapeStats:
     """Shape-level summary statistics, identical in structure across all three shapes."""
     count_metric_series:        Optional[int] = None  # number of Metric-Series in this shape
-    count_comparative_units:    Optional[int] = None  # total units in population
+    count_units:                Optional[int] = None  # total units in population
     count_units_with_any_data:  Optional[int] = None  # units with data in at least one Metric-Series
 
 
@@ -48,14 +48,14 @@ class NumericSeriesMetricStats:
 
 
 @dataclass
-class NumericSeriesUnit(ComparativeUnit):
-    """One comparative unit's values across one or more independent Metric-Series."""
+class NumericSeriesUnit(Unit):
+    """One unit's values across one or more independent Metric-Series."""
     values: list[Optional[float]] = field(default_factory=list)
 
 
 @dataclass
 class NumericSeries:
-    """One or more independent numeric Metric-Series across a comparative population."""
+    """One or more independent numeric Metric-Series across a population."""
     # Metadata
     title:              Optional[str]       = None
     metric_names:       list[str]           = field(default_factory=list)  # one per Metric-Series
@@ -84,8 +84,8 @@ class NumericCompositionalMetricStats:
 
 
 @dataclass
-class NumericCompositionalUnit(ComparativeUnit):
-    """One comparative unit's values for one Metric-Series in a NumericCompositional shape."""
+class NumericCompositionalUnit(Unit):
+    """One unit's values for one Metric-Series in a NumericCompositional shape."""
     values: list[Optional[float]] = field(default_factory=list)
 
 
@@ -100,7 +100,7 @@ class NumericCompositionalMetric:
 
 @dataclass
 class NumericCompositional:
-    """One or more Metric-Series per comparative unit, each composed of Component-Series summing to a whole."""
+    """One or more Metric-Series per unit, each composed of Component-Series summing to a whole."""
     # Metadata
     title:              Optional[str]       = None
     year:               Optional[int]       = None
@@ -123,8 +123,8 @@ class CategoricalCompositionalMetricStats:
 
 
 @dataclass
-class CategoricalCompositionalUnit(ComparativeUnit):
-    """One comparative unit's response for one Metric-Series (question)."""
+class CategoricalCompositionalUnit(Unit):
+    """One unit's response for one Metric-Series (question)."""
     response: Optional[str] = None
 
 
@@ -139,7 +139,7 @@ class CategoricalCompositionalMetric:
 
 @dataclass
 class CategoricalCompositional:
-    """One or more Metric-Series (questions) per comparative population, each with categorical Component-Series that sum to a whole."""
+    """One or more Metric-Series (questions) per population, each with categorical Component-Series that sum to a whole."""
     # Metadata
     title:              Optional[str]       = None
     year:               Optional[int]       = None
@@ -216,59 +216,59 @@ def _recalc_categorical_metric_stats(units: list, category_names: list) -> "Cate
     )
 
 
-def filter_numeric_series(shape: "NumericSeries", submission_ids: set) -> "NumericSeries":
-    """Return a new NumericSeries filtered to submission_ids with stats recalculated."""
+def filter_numeric_series(shape: "NumericSeries", unit_ids: set) -> "NumericSeries":
+    """Return a new NumericSeries filtered to unit_ids with stats recalculated."""
     from dataclasses import replace
-    filtered_units = [u for u in shape.units if u.submission_id in submission_ids]
+    filtered_units = [u for u in shape.units if u.unit_id in unit_ids]
     new_stats = _recalc_numeric_series_stats(filtered_units)
     new_shape_stats = ShapeStats(
         count_metric_series=len(shape.metric_names),
-        count_comparative_units=len(filtered_units),
+        count_units=len(filtered_units),
         count_units_with_any_data=sum(1 for u in filtered_units if any(v is not None for v in u.values)),
     )
     return replace(shape, units=filtered_units, metric_stats=new_stats, shape_stats=new_shape_stats)
 
 
-def filter_numeric_compositional(shape: "NumericCompositional", submission_ids: set) -> "NumericCompositional":
-    """Return a new NumericCompositional filtered to submission_ids with stats recalculated."""
+def filter_numeric_compositional(shape: "NumericCompositional", unit_ids: set) -> "NumericCompositional":
+    """Return a new NumericCompositional filtered to unit_ids with stats recalculated."""
     from dataclasses import replace
     new_metrics = []
     for metric in shape.metrics:
-        filtered_units = [u for u in metric.units if u.submission_id in submission_ids]
+        filtered_units = [u for u in metric.units if u.unit_id in unit_ids]
         new_stats = _recalc_numeric_compositional_metric_stats(filtered_units)
         new_metrics.append(replace(metric, units=filtered_units, stats=new_stats))
     n_units = len(new_metrics[0].units) if new_metrics else 0
     new_shape_stats = ShapeStats(
         count_metric_series=len(new_metrics),
-        count_comparative_units=n_units,
+        count_units=n_units,
         count_units_with_any_data=n_units,
     )
     return replace(shape, metrics=new_metrics, shape_stats=new_shape_stats)
 
 
-def filter_categorical_compositional(shape: "CategoricalCompositional", submission_ids: set) -> "CategoricalCompositional":
-    """Return a new CategoricalCompositional filtered to submission_ids with stats recalculated."""
+def filter_categorical_compositional(shape: "CategoricalCompositional", unit_ids: set) -> "CategoricalCompositional":
+    """Return a new CategoricalCompositional filtered to unit_ids with stats recalculated."""
     from dataclasses import replace
     new_metrics = []
     for metric in shape.metrics:
-        filtered_units = [u for u in metric.units if u.submission_id in submission_ids]
+        filtered_units = [u for u in metric.units if u.unit_id in unit_ids]
         new_stats = _recalc_categorical_metric_stats(filtered_units, metric.category_names)
         new_metrics.append(replace(metric, units=filtered_units, stats=new_stats))
     n_units = len(new_metrics[0].units) if new_metrics else 0
     new_shape_stats = ShapeStats(
         count_metric_series=len(new_metrics),
-        count_comparative_units=n_units,
+        count_units=n_units,
         count_units_with_any_data=new_metrics[0].stats.count_with_data if new_metrics else 0,
     )
     return replace(shape, metrics=new_metrics, shape_stats=new_shape_stats)
 
 
-def filter_shape(shape, submission_ids: set):
+def filter_shape(shape, unit_ids: set):
     """Dispatch to the correct filter function based on shape type."""
     if isinstance(shape, NumericSeries):
-        return filter_numeric_series(shape, submission_ids)
+        return filter_numeric_series(shape, unit_ids)
     elif isinstance(shape, NumericCompositional):
-        return filter_numeric_compositional(shape, submission_ids)
+        return filter_numeric_compositional(shape, unit_ids)
     elif isinstance(shape, CategoricalCompositional):
-        return filter_categorical_compositional(shape, submission_ids)
+        return filter_categorical_compositional(shape, unit_ids)
     raise TypeError(f"Unknown shape type: {type(shape)}")

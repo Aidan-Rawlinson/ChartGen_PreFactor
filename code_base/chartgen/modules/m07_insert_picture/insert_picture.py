@@ -17,8 +17,8 @@ def _substitute_tokens(path: str, report_context) -> str:
     """Replace [code] and [id] tokens in a path string with values from ReportContext."""
     if report_context is None:
         return path
-    path = path.replace("[code]", str(report_context.submission_code))
-    path = path.replace("[id]",   str(report_context.submission_id))
+    path = path.replace("[code]", str(report_context.unit_code))
+    path = path.replace("[id]",   str(report_context.unit_id))
     return path
 
 

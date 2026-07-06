@@ -17,8 +17,8 @@ from modules.m04_data_shapes.shapes import (
 def _from_dict_numeric_series(d):
     units = [
         NumericSeriesUnit(
-            submission_code=u["submission_code"],
-            submission_id=u["submission_id"],
+            unit_code=u["unit_code"],
+            unit_id=u["unit_id"],
             values=u["values"],
         )
         for u in d.get("units", [])
@@ -44,8 +44,8 @@ def _from_dict_numeric_compositional(d):
     for m in d.get("metrics", []):
         units = [
             NumericCompositionalUnit(
-                submission_code=u["submission_code"],
-                submission_id=u["submission_id"],
+                unit_code=u["unit_code"],
+                unit_id=u["unit_id"],
                 values=u["values"],
             )
             for u in m.get("units", [])
@@ -71,8 +71,8 @@ def _from_dict_categorical_compositional(d):
     for m in d.get("metrics", []):
         units = [
             CategoricalCompositionalUnit(
-                submission_code=u["submission_code"],
-                submission_id=u["submission_id"],
+                unit_code=u["unit_code"],
+                unit_id=u["unit_id"],
                 response=u.get("response"),
             )
             for u in m.get("units", [])
