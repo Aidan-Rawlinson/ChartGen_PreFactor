@@ -1048,9 +1048,9 @@ with tab_running_order:
                     f_chart_type = row.get("chart_type_ref", "")
 
                 if needs_populations:
-                    from modules.m12_local_config.local_config import get_peer_group_columns
-                    _peer_cols = get_peer_group_columns(_units())
-                    _pop_options = ["All"] + _peer_cols + ["Selected"]
+                    from modules.m12_local_config.local_config import get_peer_group_value_options
+                    _peer_options = get_peer_group_value_options(_units())
+                    _pop_options = ["All"] + _peer_options + ["Selected"]
                     current_pop_str = str(row.get("populations", "") or "")
                     if is_insert_chart and not current_pop_str:
                         current_pop_list = []

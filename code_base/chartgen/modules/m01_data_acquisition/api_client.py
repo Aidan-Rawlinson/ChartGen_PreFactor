@@ -79,7 +79,7 @@ def get_submissions(project_id: int, year: int, token: str, include_org_level: b
                 })
 
         rows.append({
-            "submission_id": s.get("submissionId", ""),
+            "submission_id": str(s.get("submissionId", "") if s.get("submissionId") is not None else ""),
             "submission_code": s.get("submissionCode", ""),
             "submission_name": s.get("submissionName", ""),
             "submission_year": s.get("submissionYear", ""),

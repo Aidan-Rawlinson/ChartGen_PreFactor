@@ -27,69 +27,78 @@ from modules.m08_insert_from_excel.insert_from_excel import (
 def build_population_shapes(data_shape, populations_str: str,
                              units: list, report_context) -> list:
     """
-    Build an ordered list of PopulationShape objects from a populations string,
-    applying each '^'-delimited token as a sequential intersecting filter.
-    Tokens: 'All' (identity), 'Selected' (current organisation), 'Name()' (peer group column).
-    Returns [] if populations_str is blank or no tokens resolve.
+    Build an ordered list of PopulationShape objects from a '^'-delimited
+    populations string. The first token defines the scope (the full set being
+    compared); each subsequent token is an independent subset of that scope.
+    Tokens: 'All' (every unit), 'Selected' (current organisation),
+    'Name()' (selected unit's own group), 'Name(Value)' (the named group).
+    Returns [] if populations_str is blank or the scope resolves empty.
+    Unit ids are compared as strings throughout.
     """
     if not populations_str or not populations_str.strip():
         return []
 
-    # All unit_ids present in the data shape
     shape_ids = {u.unit_id for u in _get_shape_units(data_shape)}
     if not shape_ids:
         return []
 
-    # Build a unit lookup for peer group column resolution
-    unit_lookup = {str(r["unit_id"]): r for r in units}
-    selected_id = str(report_context.unit_id) if report_context else None
+    unit_lookup = {r["unit_id"]: r for r in units}
+    selected_id = report_context.unit_id if report_context else None
     selected_org_id = str(report_context.organisation_id) if report_context else None
 
-    running_ids = set(shape_ids)  # intersection accumulator
-    results = []
+    def _resolve(token: str, scope_ids: set):
+        """Resolve one token to (unit_ids, label) within scope_ids, or None."""
+        if token == "All":
+            return set(scope_ids), "All"
 
-    for token in populations_str.split("^"):
-        token = token.strip()
+        if token == "Selected":
+            if not selected_org_id:
+                return None
+            ids = {
+                r["unit_id"] for r in units
+                if str(r["organisation_id"]) == selected_org_id
+                and r["unit_id"] in scope_ids
+            }
+            return ids, "Selected"
+
+        if token.endswith(")") and "(" in token:
+            col_name, value = token[:-1].split("(", 1)
+            col = col_name + "()"
+            if not value:  # Name() — selected unit's own group
+                if not selected_id or selected_id not in unit_lookup:
+                    return None
+                value = unit_lookup[selected_id].get(col, "")
+                if not value:
+                    return None
+            ids = {
+                r["unit_id"] for r in units
+                if r.get(col) == value
+                and r["unit_id"] in scope_ids
+            }
+            return ids, value
+
+        return None
+
+    results = []
+    scope_ids = set(shape_ids)
+
+    for i, token in enumerate(t.strip() for t in populations_str.split("^")):
         if not token:
             continue
 
-        if token == "All":
-            token_ids = set(shape_ids)  # identity — no reduction
-            label = "All"
-
-        elif token == "Selected":
-            if not selected_org_id:
-                continue
-            token_ids = {
-                int(r["unit_id"]) for r in units
-                if str(r["organisation_id"]) == selected_org_id
-                and int(r["unit_id"]) in running_ids
-            }
-            label = "Selected"
-
-        elif token.endswith("()"):
-            col = token
-            if not selected_id or selected_id not in unit_lookup:
-                continue
-            group_value = unit_lookup[selected_id].get(col, "")
-            if not group_value:
-                continue
-            token_ids = {
-                int(r["unit_id"]) for r in units
-                if r.get(col) == group_value
-                and int(r["unit_id"]) in running_ids
-            }
-            label = group_value
-
-        else:
+        resolved = _resolve(token, scope_ids)
+        if resolved is None:
+            if i == 0:
+                return []
             continue
+        token_ids, label = resolved
 
-        # Intersect with running set
-        running_ids = running_ids & token_ids
-        if not running_ids:
-            break
+        if i == 0:
+            if not token_ids:
+                return []
+            scope_ids = token_ids
 
-        filtered = filter_shape(data_shape, running_ids)
+        filtered = filter_shape(data_shape, token_ids)
         results.append(PopulationShape(role=token, label=label, shape=filtered))
 
     return results

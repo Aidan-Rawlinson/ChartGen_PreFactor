@@ -84,7 +84,7 @@ Structured in pipeline order: application/session foundations, then workfile set
 | Reporting units + identifiers | Complete | Fetched from API at workfile setup; stored as `units.csv`. |
 | Organisation reference data (`organisations.csv`) | Complete | Fetched from `GET /organisations?year={year}`; used to resolve peer group columns at save time. |
 | Peer group assignments — `Region()` | Complete | Resolved at workfile creation, written permanently into `units.csv`. |
-| Additional peer group columns (`Name()`) | Partial | Empty-bracket tokens (`Region()`) fully supported end-to-end: column discovery, Running Order multi-select, and resolution to the selected unit's own group. Explicit-value tokens (`Region(Wales)`) are not implemented — silently skipped at resolution. |
+| Additional peer group columns (`Name()`) | Complete | Both empty-bracket (`Region()`, the selected unit's own group) and explicit-value (`Region(Wales)`, a named group) tokens are supported end-to-end: column discovery, Running Order multi-select (auto-populated with every distinct value per column), and resolution against the population scope. |
 | Binary peer group columns (flag columns) | Not built | Resolution logic for `1`/`0` membership columns not yet implemented in `build_population_shapes`. |
 | Multi-level hierarchy model | Not built | Current model uses a single flat population. |
 

@@ -95,3 +95,29 @@
 
 **Decision:** Downstream prose using "submission" to mean "reporting unit" (rather than the act of submitting) was also renamed for consistency, even though not explicitly named in the original Refactoring Issues text — "Multiple submissions from same org" → "Multiple units from same org" (Feature List), "Multi-submission table expansion" → "Multi-unit table expansion" (Feature List, Functional Spec §11.2).
 **Rationale:** Both describe multiple *units* mapping to one org/table, not multiple submission *events* — the same identity-vs-event distinction that governed the CSV field renames, applied consistently to prose.
+
+## Session 6 — [Date not specified]
+
+**Decision:** Population stacking resolved as **scope-plus-independent-layers**: the first populations-string token defines the full comparison population (the scope); every subsequent token, including `Selected`, resolves independently against that scope rather than cumulatively against the previous token's result. This replaces the previously documented sequential-intersection model.
+**Rationale:** User-derived from two competing real-world cases — `Welsh Hospitals^Small Hospitals^Selected` (where cumulative narrowing feels right) versus `All Trusts^Shelford Group^Selected` (where a non-Shelford trust legitimately wants to compare itself against the Shelford Group without being filtered out). Sequential intersection cannot express the second case at all — sibling peer groups intersected are mutually exclusive, so `All^East Midlands^West Midlands^Selected` would always empty out at the third token, yet showing two peer groups side by side against the full population was confirmed as a standard use case. Scope-plus-layers is the simplest model that supports both cases without a configurable mode.
+
+**Decision:** Both `Selected` and peer-group layers resolve within the scope (the first token), not against the whole dataset.
+**Rationale:** Explicit user confirmation — a report scoped to a population the reporting unit isn't part of is an authoring choice/error, and resolving everything downstream against the same scope keeps the model to one sentence: "the first token defines the population; every subsequent token is an independent subset of it."
+
+**Decision:** An unresolvable or empty first token (the scope) returns no population shapes at all — no fallback substitution, no default population.
+**Rationale:** Explicit user ruling — "an unresolvable first token returning no values is a valid result. We need to just accept that, not try to mitigate it here." Downstream, `insert_chart`'s pre-existing full-shape fallback (unchanged this session) still applies when `build_population_shapes` returns empty.
+
+**Decision:** No warning mechanism was added for unresolvable tokens, empty resolutions, or the fallback-to-full-shape path, despite being raised as an option.
+**Rationale:** Explicit user ruling, reiterated after being proposed twice — "the dominant way we will avoid these failures is clean data flows... we can't have our code ending up 50% covering situations that never occur." Silent-skip behaviour from the prior model is preserved as-is.
+
+**Decision:** `unit_id` is standardised to `str` throughout the codebase (data shapes, `ReportContext`, resolution logic), coerced once at each ingestion boundary (`api_client.get_submissions`, the `transformers.py` chart-data transforms) rather than left as int or coerced defensively at each point of use.
+**Rationale:** User's explicit reasoning — ids are identifiers, not quantities, and future data sources may only have non-numeric ids; a single canonical string type avoids the int/str boundary mismatch that was the actual cause of `Region()`/`Selected` resolving to zero units during testing (confirmed via a temporary debug dump, `population_debug.txt`, since removed).
+
+**Decision:** The Excel `insert_from_excel` driver-range write (`driver_cell.Value = ctx.report_context.unit_id`) is left writing a string, not converted back to an integer.
+**Rationale:** Explicit user instruction — Excel is expected to handle a numeric string in a driver cell without issue; to be confirmed by observation in practice rather than pre-emptively coerced.
+
+**Decision:** The Running Order populations multi-select (`app.py`) was made fully generic — for every `Name()` peer-group column discovered in `units.csv`, it now offers the bare token plus one `Name(Value)` token per distinct value present in that column — rather than hard-coded to `Region()`/`Region(Value)` specifically.
+**Rationale:** Explicit user correction after an initial fix was scoped too narrowly to region wording — "it must be a purely generic response not a specific one." Implemented as `get_peer_group_value_options` in `local_config.py`, with no column name referenced anywhere in the implementation.
+
+**Decision:** During testing, a chart apparently failing to resolve `Region()`/`Selected` (zero units, despite correct string types) was traced to a year mismatch — `units.csv` built for 2025, chart data fetched against a different year's toolkit URLs — not a code defect. No code change was made in response; the resolution logic was confirmed correct once matching-year data was used.
+**Rationale:** Established via ID-range comparison (chart data ids consistently ~4,000 below roster ids, a signature of two different years' submission ID sequences) and confirmed directly by the user. Recorded here so the apparent bug is not mistakenly revisited in a future session.

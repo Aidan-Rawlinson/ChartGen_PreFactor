@@ -23,6 +23,11 @@ def _optional_float(value):
         return None
 
 
+def _unit_id_str(value) -> str:
+    """Coerce a raw API unit/submission id to the canonical string form."""
+    return str(value) if value is not None else "0"
+
+
 def _percentile(sorted_values, pct):
     n = len(sorted_values)
     if n == 1:
@@ -88,7 +93,7 @@ def transform_bar_chart(data, year):
         values = [_optional_float(item.get(f"response{i+1}")) for i in range(n_metrics)]
         unit = NumericSeriesUnit(
             unit_code=item.get("submissionCode") or "",
-            unit_id=item.get("submissionId") or 0,
+            unit_id=_unit_id_str(item.get("submissionId")),
             values=values,
         )
         if "numerator" in item:
@@ -138,7 +143,7 @@ def transform_pie_chart(data, year):
     units = [
         CategoricalCompositionalUnit(
             unit_code=item.get("submissionCode") or "",
-            unit_id=item.get("submissionId") or 0,
+            unit_id=_unit_id_str(item.get("submissionId")),
             response=item.get("response"),
         )
         for item in table_data
@@ -204,7 +209,7 @@ def transform_yn_chart(data, year):
             response = raw if raw not in (None, "-", " ") else None
             units.append(CategoricalCompositionalUnit(
                 unit_code=item.get("submissionCode") or "",
-                unit_id=item.get("submissionId") or 0,
+                unit_id=_unit_id_str(item.get("submissionId")),
                 response=response,
             ))
         count_with_data = sum(1 for u in units if u.response is not None)
@@ -260,7 +265,7 @@ def transform_radar_chart(data, year):
         component_names=segment_names,
         units=[NumericCompositionalUnit(
             unit_code="SAMPLE_AVG",
-            unit_id=0,
+            unit_id="0",
             values=sample_avg_values,
         )],
         stats=NumericCompositionalMetricStats(

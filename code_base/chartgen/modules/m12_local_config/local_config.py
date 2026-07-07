@@ -14,7 +14,7 @@ class ReportContext:
     Runtime context for a single report in a batch run.
     Constructed by the Assembly Engine; passed to render_chart.
     """
-    unit_id:            int
+    unit_id:            str
     unit_code:          str
     unit_name:          str
     organisation_id:    str
@@ -31,6 +31,24 @@ def get_peer_group_columns(units: list) -> list:
     return [col for col in units[0].keys() if col.endswith("()")]
 
 
+def get_peer_group_value_options(units: list) -> list:
+    """
+    Return populations-string tokens for every peer group column, in column order.
+    For each Name() column, yields the bare token first, then one Name(Value) token
+    per distinct non-blank value present in that column, sorted alphabetically.
+    Does not include 'All' or 'Selected' — callers add those.
+    """
+    if not units:
+        return []
+    options = []
+    for col in get_peer_group_columns(units):
+        name = col[:-2]  # strip trailing "()"
+        options.append(col)
+        values = sorted({(r.get(col) or "").strip() for r in units if (r.get(col) or "").strip()})
+        options.extend(f"{name}({v})" for v in values)
+    return options
+
+
 def build_report_context(settings: dict, units: list) -> Optional[ReportContext]:
     """
     Build a ReportContext from settings and the loaded unit list.
@@ -45,7 +63,7 @@ def build_report_context(settings: dict, units: list) -> Optional[ReportContext]
         return None
 
     return ReportContext(
-        unit_id=int(row["unit_id"]),
+        unit_id=str(row["unit_id"]),
         unit_code=row["unit_code"],
         unit_name=row["unit_name"],
         organisation_id=row["organisation_id"],

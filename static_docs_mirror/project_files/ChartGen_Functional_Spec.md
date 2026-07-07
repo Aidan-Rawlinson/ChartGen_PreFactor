@@ -243,20 +243,18 @@ Charts do not receive a single data shape. They receive an ordered list of `Popu
 
 **The populations string** (e.g. `All^Region()^Selected`) is specified on the Running Order — either as a workfile default via `set_default_populations`, or overridden per chart row in the `populations` column. It is authored as a `^`-delimited ordered list of tokens and edited via a multi-select in the Running Order dialog.
 
-**Resolution — sequential intersection model:** `build_population_shapes` in the Assembly Engine processes each token as an intersecting filter on the running set of unit_ids:
+**Resolution — scope-plus-independent-layers model:** `build_population_shapes` in the Assembly Engine treats the first token as the scope — the full set of units the chart compares. Every subsequent token resolves independently against that scope, not against each other:
 
-1. Start with all units in the data shape
-2. For each token, intersect the running set with that token's members
-3. Filter the data shape to the resulting intersection; recalculate stats against that population
-4. Append as a `PopulationShape`
+1. Resolve the first token against all units in the data shape; this becomes the scope. An unresolvable or empty first token produces no population shapes.
+2. Resolve each remaining token against the scope only; unresolvable tokens are skipped.
+3. Filter the data shape to each result; recalculate stats against that population.
+4. Append each as a `PopulationShape`, in token order.
 
-`All` is the identity filter. `Selected` filters to the current organisation's units within the running intersection — it is never a data scope filter, only a membership filter on what survives the preceding tokens.
+`Selected` is a layer like any other — the current organisation's units within the scope. Peer tokens support both empty-bracket form (`Name()`, the selected unit's own group) and explicit-value form (`Name(Value)`, a named group, which need not contain the selected unit).
 
-**Example:** for a selected unit that is a large Welsh hospital, `Region()^Hospital_Size()^Selected` produces three shapes: (1) Welsh units, (2) Welsh large-hospital units, (3) Welsh large-hospital units belonging to the selected organisation.
+**Token position determines scope vs. layer.** The first token is always the scope; everything after it is an independent layer within that scope. `Region()^Selected` scopes to the selected unit's own region — the wider population never appears. `All^Region()^Selected` scopes to everyone, with region and Selected as layers inside it.
 
-*Only empty-bracket tokens are resolved — each filters to the selected unit's own group for that column. Explicit-value tokens (`Region(Wales)`) are not built; they are currently skipped silently at resolution.*
-
-**Two usage patterns follow from token position.** A peer token leading the string acts as a data filter — `Region()^Selected` scopes the chart to the selected unit's own region; the wider population never appears. A peer token following `All` acts as a visualisation layer — `All^Region()^Selected` retains the full population and renders the peer group as an additional layer within it.
+**Example:** `Region(Wales)^Hospital_Size()^Selected` produces three shapes: (1) all Welsh units — the scope; (2) the selected unit's hospital-size group, resolved within Wales; (3) the selected unit, resolved within Wales. Layers 2 and 3 are independent of each other, not cumulative.
 
 The canonical data shapes are designed to hold any comparative analysis dataset; the Chart Engine's contract with the Running Order means any chart type Python's libraries can render can be added without changes elsewhere in the system.
 

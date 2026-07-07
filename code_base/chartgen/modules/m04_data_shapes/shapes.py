@@ -15,7 +15,7 @@ from typing import Optional
 class Unit:
     """Identity fields shared by all per-unit entries across all shapes."""
     unit_code: str
-    unit_id:   int
+    unit_id:   str
 
 
 # ---------------------------------------------------------------------------
