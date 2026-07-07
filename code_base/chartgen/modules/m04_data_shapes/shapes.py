@@ -61,6 +61,7 @@ class NumericSeries:
     metric_names:       list[str]           = field(default_factory=list)  # one per Metric-Series
     year:               Optional[int]       = None
     format_modifier:    Optional[str]       = None
+    population_label:   Optional[str]       = None  # resolved population-string token label, set by build_population_shapes
 
     # Data
     has_valid_unit_data: bool               = True
@@ -105,6 +106,7 @@ class NumericCompositional:
     title:              Optional[str]       = None
     year:               Optional[int]       = None
     format_modifier:    Optional[str]       = None
+    population_label:   Optional[str]       = None  # resolved population-string token label, set by build_population_shapes
 
     # Data — one NumericCompositionalMetric per Metric-Series
     has_valid_unit_data: bool               = True
@@ -143,6 +145,7 @@ class CategoricalCompositional:
     # Metadata
     title:              Optional[str]       = None
     year:               Optional[int]       = None
+    population_label:   Optional[str]       = None  # resolved population-string token label, set by build_population_shapes
 
     # Data — one CategoricalCompositionalMetric per question/Metric-Series
     has_valid_unit_data: bool               = True
@@ -150,16 +153,6 @@ class CategoricalCompositional:
 
     # Shape-level stats
     shape_stats:        ShapeStats          = field(default_factory=ShapeStats)
-# ---------------------------------------------------------------------------
-# Population shape container
-# ---------------------------------------------------------------------------
-
-@dataclass
-class PopulationShape:
-    """A filtered data shape representing one population layer."""
-    role:  str
-    label: str
-    shape: object  # NumericSeries | NumericCompositional | CategoricalCompositional
 
 
 # ---------------------------------------------------------------------------

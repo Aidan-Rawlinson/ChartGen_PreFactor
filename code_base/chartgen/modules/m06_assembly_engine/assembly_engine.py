@@ -9,6 +9,7 @@ import io
 import shutil
 import time
 import traceback
+from dataclasses import replace
 
 from pptx import Presentation
 from pptx.util import Emu
@@ -17,7 +18,7 @@ from PIL import Image as PILImage
 from modules.m05_chart_engine.cache_reader import load_shape
 from modules.m05_chart_engine.base_charts import render_chart
 from modules.m12_local_config.local_config import ReportContext, build_report_context
-from modules.m04_data_shapes.shapes import PopulationShape, filter_shape
+from modules.m04_data_shapes.shapes import filter_shape
 from modules.m07_insert_picture.insert_picture import insert_picture
 from modules.m08_insert_from_excel.insert_from_excel import (
     open_excel, close_excel, insert_from_excel
@@ -27,13 +28,13 @@ from modules.m08_insert_from_excel.insert_from_excel import (
 def build_population_shapes(data_shape, populations_str: str,
                              units: list, report_context) -> list:
     """
-    Build an ordered list of PopulationShape objects from a '^'-delimited
-    populations string. The first token defines the scope (the full set being
-    compared); each subsequent token is an independent subset of that scope.
-    Tokens: 'All' (every unit), 'Selected' (current organisation),
-    'Name()' (selected unit's own group), 'Name(Value)' (the named group).
-    Returns [] if populations_str is blank or the scope resolves empty.
-    Unit ids are compared as strings throughout.
+    Build an ordered list of data shapes from a '^'-delimited populations string,
+    each filtered to one population layer with population_label set. The first
+    token defines the scope (the full set being compared); each subsequent token
+    is an independent subset of that scope. Tokens: 'All' (every unit), 'Selected'
+    (current organisation), 'Name()' (selected unit's own group), 'Name(Value)'
+    (the named group). Returns [] if populations_str is blank or the scope
+    resolves empty. Unit ids are compared as strings throughout.
     """
     if not populations_str or not populations_str.strip():
         return []
@@ -99,7 +100,8 @@ def build_population_shapes(data_shape, populations_str: str,
             scope_ids = token_ids
 
         filtered = filter_shape(data_shape, token_ids)
-        results.append(PopulationShape(role=token, label=label, shape=filtered))
+        filtered = replace(filtered, population_label=label)
+        results.append(filtered)
 
     return results
 
@@ -226,8 +228,7 @@ def insert_chart(ctx: AssemblyContext, row: dict, settings: dict) -> dict:
 
     # Fall back to full unfiltered shape if no populations resolved
     if not population_shapes:
-        from modules.m04_data_shapes.shapes import PopulationShape
-        population_shapes = [PopulationShape(role="All", label="All", shape=data_shape)]
+        population_shapes = [replace(data_shape, population_label="All")]
 
     # --- Render chart image ---
     try:

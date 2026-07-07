@@ -144,7 +144,7 @@ The data cache is a folder containing one JSON file per fetched chart, plus a ma
 
 Chart data is normalised into a small set of canonical data shapes. All downstream consumers — the Chart Engine, tables, text replacement — work exclusively against these normalised shapes.
 
-**Immutability.** A data shape instance is never modified in place. Filtering, narrowing, or recalculating against one — including `build_population_shapes` producing a `PopulationShape` — always creates a new copy, leaving the original untouched. This avoids two risks: incompatible edits building up on a shared instance, and edits being silently forgotten because nothing marks that a change happened.
+**Immutability.** A data shape instance is never modified in place. Filtering, narrowing, or recalculating against one — including `build_population_shapes` producing a population-filtered copy — always creates a new copy, leaving the original untouched. This avoids two risks: incompatible edits building up on a shared instance, and edits being silently forgotten because nothing marks that a change happened.
 
 ### 8.2 Canonical Data Shapes
 
@@ -236,7 +236,7 @@ The system supports three canonical data shapes — NumericSeries, NumericCompos
 
 ### 10.4 Population Shapes and Chart Data Flow
 
-Charts do not receive a single data shape. They receive an ordered list of `PopulationShape` objects, one per population token in the populations string. Each `PopulationShape` contains a filtered copy of the data shape with stats recalculated against that population only.
+Charts do not receive a single data shape. They receive an ordered list of filtered copies of the data shape, one per population token in the populations string, each carrying a `population_label` field naming its layer (e.g. `"All"`, `"Selected"`, or a resolved peer-group value).
 
 **The populations string** (e.g. `All^Region()^Selected`) is specified on the Running Order — either as a workfile default via `set_default_populations`, or overridden per chart row in the `populations` column. It is authored as a `^`-delimited ordered list of tokens and edited via a multi-select in the Running Order dialog.
 
@@ -245,7 +245,7 @@ Charts do not receive a single data shape. They receive an ordered list of `Popu
 1. Resolve the first token against all units in the data shape; this becomes the scope. An unresolvable or empty first token produces no population shapes.
 2. Resolve each remaining token against the scope only; unresolvable tokens are skipped.
 3. Filter the data shape to each result; recalculate stats against that population.
-4. Append each as a `PopulationShape`, in token order.
+4. Set `population_label` to the resolved label and append, in token order.
 
 `Selected` is a layer like any other — the current organisation's units within the scope. Peer tokens support both empty-bracket form (`Name()`, the selected unit's own group) and explicit-value form (`Name(Value)`, a named group, which need not contain the selected unit).
 

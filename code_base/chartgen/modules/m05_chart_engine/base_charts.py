@@ -22,7 +22,6 @@ from modules.m04_data_shapes.shapes import (
     NumericSeries,
     NumericCompositional,
     CategoricalCompositional,
-    PopulationShape,
 )
 
 # ---------------------------------------------------------------------------
@@ -73,11 +72,11 @@ def _k_fmt(v, _):
     return f"{v/1000:.1f}K" if abs(v) >= 1000 else f"{v:g}"
 
 
-def _layer_colour(pop_index: int, role: str, peer_colour_idx: int) -> str:
-    """Return the colour for a population layer given its role and peer index."""
-    if role == "Selected":
+def _layer_colour(pop_index: int, population_label: str, peer_colour_idx: int) -> str:
+    """Return the colour for a population layer given its population_label and peer index."""
+    if population_label == "Selected":
         return HIGHLIGHT
-    if role == "All":
+    if population_label == "All":
         return BAR_BLUE
     return PEER_COLOURS[peer_colour_idx % len(PEER_COLOURS)]
 
@@ -87,12 +86,12 @@ def _resolve_unit_colours(units: list, population_shapes: list) -> list:
     colours = [BAR_BLUE] * len(units)
     peer_colour_idx = 0
     for ps in population_shapes:
-        if ps.role == "All":
+        if ps.population_label == "All":
             continue
-        colour = HIGHLIGHT if ps.role == "Selected" else PEER_COLOURS[peer_colour_idx % len(PEER_COLOURS)]
-        if ps.role != "Selected":
+        colour = HIGHLIGHT if ps.population_label == "Selected" else PEER_COLOURS[peer_colour_idx % len(PEER_COLOURS)]
+        if ps.population_label != "Selected":
             peer_colour_idx += 1
-        ids = {u.unit_id for u in ps.shape.units}
+        ids = {u.unit_id for u in ps.units}
         for i, u in enumerate(units):
             if u.unit_id in ids:
                 colours[i] = colour
@@ -104,13 +103,13 @@ def _population_legend_handles(population_shapes: list, data_label: str) -> list
     handles = [mpatches.Patch(color=BAR_BLUE, label=data_label)]
     peer_colour_idx = 0
     for ps in population_shapes:
-        if ps.role == "All":
+        if ps.population_label == "All":
             continue
-        if ps.role == "Selected":
+        if ps.population_label == "Selected":
             handles.append(mpatches.Patch(color=HIGHLIGHT, label="Selected"))
         else:
             colour = PEER_COLOURS[peer_colour_idx % len(PEER_COLOURS)]
-            handles.append(mpatches.Patch(color=colour, label=ps.label))
+            handles.append(mpatches.Patch(color=colour, label=ps.population_label))
             peer_colour_idx += 1
     return handles
 
@@ -142,7 +141,7 @@ def _autotable_with_selection(stats: dict, report_context, selected_value) -> di
 
 def ranked_column(population_shapes: list, width=80, height=50, tweaks=[], report_context=None):
     """Ranked descending column chart with mean/median/quartile reference lines."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig, ax = plt.subplots(figsize=(w, h))
     ms = base.metric_stats[0]
@@ -194,7 +193,7 @@ def ranked_column(population_shapes: list, width=80, height=50, tweaks=[], repor
 
 def dot_strip(population_shapes: list, width=80, height=40, tweaks=[], report_context=None):
     """Strip / dot plot — one dot per unit ranked left to right."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig, ax = plt.subplots(figsize=(w, h))
     ms = base.metric_stats[0]
@@ -245,7 +244,7 @@ def dot_strip(population_shapes: list, width=80, height=40, tweaks=[], report_co
 
 def box_whisker(population_shapes: list, width=50, height=50, tweaks=[], report_context=None):
     """Box and whisker — distribution from first shape, markers for subsequent layers."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig, ax = plt.subplots(figsize=(w, h))
     values = [u.values[0] for u in base.units if u.values[0] is not None]
@@ -262,8 +261,8 @@ def box_whisker(population_shapes: list, width=50, height=50, tweaks=[], report_
     extra_handles = []
     peer_colour_idx = 0
     for ps in population_shapes[1:]:
-        if ps.role == "Selected":
-            sel_units = ps.shape.units
+        if ps.population_label == "Selected":
+            sel_units = ps.units
             if sel_units and sel_units[0].values[0] is not None:
                 sv = sel_units[0].values[0]
                 ax.scatter([1], [sv], color=HIGHLIGHT, zorder=7, s=80, marker="D")
@@ -274,16 +273,16 @@ def box_whisker(population_shapes: list, width=50, height=50, tweaks=[], report_
         else:
             colour = PEER_COLOURS[peer_colour_idx % len(PEER_COLOURS)]
             peer_colour_idx += 1
-            peer_vals = [u.values[0] for u in ps.shape.units if u.values[0] is not None]
+            peer_vals = [u.values[0] for u in ps.units if u.values[0] is not None]
             if peer_vals and report_context:
-                sel_in_peer = next((u.values[0] for u in ps.shape.units
+                sel_in_peer = next((u.values[0] for u in ps.units
                                     if u.unit_id == report_context.unit_id
                                     and u.values[0] is not None), None)
                 if sel_in_peer is not None:
                     ax.scatter([1], [sel_in_peer], color=colour, zorder=6, s=60, marker="D", alpha=0.85)
                     ax.axhline(sel_in_peer, color=colour, linewidth=0.8, linestyle=":", zorder=5, alpha=0.5)
                     extra_handles.append(plt.Line2D([0],[0], marker="D", color="w",
-                        markerfacecolor=colour, markersize=6, label=ps.label))
+                        markerfacecolor=colour, markersize=6, label=ps.population_label))
 
     ax.set_xticks([])
     ax.set_title(base.title or "", fontsize=10, fontweight="bold", pad=10)
@@ -303,8 +302,8 @@ def box_whisker(population_shapes: list, width=50, height=50, tweaks=[], report_
     ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.08),
               ncol=2, fontsize=7, frameon=False)
     fig.tight_layout()
-    sel_val = next((u.values[0] for ps in population_shapes if ps.role == "Selected"
-                    for u in ps.shape.units if u.values[0] is not None), None)
+    sel_val = next((u.values[0] for ps in population_shapes if ps.population_label == "Selected"
+                    for u in ps.units if u.values[0] is not None), None)
     stats = {
         "Min":            round(ms.min,   1) if ms.min    is not None else None,
         "Lower Quartile": round(ms.q1,    1) if ms.q1     is not None else None,
@@ -318,7 +317,7 @@ def box_whisker(population_shapes: list, width=50, height=50, tweaks=[], report_
 
 def frequency_histogram(population_shapes: list, width=60, height=45, tweaks=[], report_context=None):
     """Frequency histogram — distribution from first shape, reference lines for subsequent layers."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig, ax = plt.subplots(figsize=(w, h))
     values = [u.values[0] for u in base.units if u.values[0] is not None]
@@ -330,8 +329,8 @@ def frequency_histogram(population_shapes: list, width=60, height=45, tweaks=[],
 
     peer_colour_idx = 0
     for ps in population_shapes[1:]:
-        if ps.role == "Selected":
-            sel_vals = [u.values[0] for u in ps.shape.units if u.values[0] is not None]
+        if ps.population_label == "Selected":
+            sel_vals = [u.values[0] for u in ps.units if u.values[0] is not None]
             if sel_vals and report_context:
                 sv = sel_vals[0]
                 ax.axvline(sv, color=HIGHLIGHT, linewidth=2, linestyle="--", zorder=4,
@@ -339,11 +338,11 @@ def frequency_histogram(population_shapes: list, width=60, height=45, tweaks=[],
         else:
             colour = PEER_COLOURS[peer_colour_idx % len(PEER_COLOURS)]
             peer_colour_idx += 1
-            peer_vals = [u.values[0] for u in ps.shape.units if u.values[0] is not None]
+            peer_vals = [u.values[0] for u in ps.units if u.values[0] is not None]
             if peer_vals:
                 peer_mean = float(np.mean(peer_vals))
                 ax.axvline(peer_mean, color=colour, linewidth=1.5, linestyle="--",
-                           label=f"{ps.label} mean: {peer_mean:.1f}")
+                           label=f"{ps.population_label} mean: {peer_mean:.1f}")
 
     ax.set_title(base.title or "", fontsize=10, fontweight="bold", pad=10)
     ax.xaxis.set_major_formatter(mticker.FuncFormatter(_k_fmt))
@@ -353,8 +352,8 @@ def frequency_histogram(population_shapes: list, width=60, height=45, tweaks=[],
     _apply_spine_style(ax)
     ax.legend(fontsize=7, frameon=False)
     fig.tight_layout()
-    sel_val = next((u.values[0] for ps in population_shapes if ps.role == "Selected"
-                    for u in ps.shape.units if u.values[0] is not None), None)
+    sel_val = next((u.values[0] for ps in population_shapes if ps.population_label == "Selected"
+                    for u in ps.units if u.values[0] is not None), None)
     stats = {
         "Min":            round(ms.min,   1) if ms.min    is not None else None,
         "Lower Quartile": round(ms.q1,    1) if ms.q1     is not None else None,
@@ -368,7 +367,7 @@ def frequency_histogram(population_shapes: list, width=60, height=45, tweaks=[],
 
 def violin_plot(population_shapes: list, width=50, height=50, tweaks=[], report_context=None):
     """Violin plot — distribution from first shape, markers for subsequent layers."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig, ax = plt.subplots(figsize=(w, h))
     values = [u.values[0] for u in base.units if u.values[0] is not None]
@@ -384,8 +383,8 @@ def violin_plot(population_shapes: list, width=50, height=50, tweaks=[], report_
     extra_handles = []
     peer_colour_idx = 0
     for ps in population_shapes[1:]:
-        if ps.role == "Selected":
-            sel_vals = [u.values[0] for u in ps.shape.units if u.values[0] is not None]
+        if ps.population_label == "Selected":
+            sel_vals = [u.values[0] for u in ps.units if u.values[0] is not None]
             if sel_vals and report_context:
                 sv = sel_vals[0]
                 ax.scatter([1], [sv], color=HIGHLIGHT, zorder=7, s=80, marker="D")
@@ -397,14 +396,14 @@ def violin_plot(population_shapes: list, width=50, height=50, tweaks=[], report_
             colour = PEER_COLOURS[peer_colour_idx % len(PEER_COLOURS)]
             peer_colour_idx += 1
             if report_context:
-                sel_in_peer = next((u.values[0] for u in ps.shape.units
+                sel_in_peer = next((u.values[0] for u in ps.units
                                     if u.unit_id == report_context.unit_id
                                     and u.values[0] is not None), None)
                 if sel_in_peer is not None:
                     ax.scatter([1], [sel_in_peer], color=colour, zorder=6, s=60, marker="D", alpha=0.85)
                     ax.axhline(sel_in_peer, color=colour, linewidth=0.8, linestyle=":", zorder=5, alpha=0.5)
                     extra_handles.append(plt.Line2D([0],[0], marker="D", color="w",
-                        markerfacecolor=colour, markersize=6, label=ps.label))
+                        markerfacecolor=colour, markersize=6, label=ps.population_label))
 
     ax.set_xticks([])
     ax.set_title(base.title or "", fontsize=10, fontweight="bold", pad=10)
@@ -423,8 +422,8 @@ def violin_plot(population_shapes: list, width=50, height=50, tweaks=[], report_
     ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.08),
               ncol=3, fontsize=7, frameon=False)
     fig.tight_layout()
-    sel_val = next((u.values[0] for ps in population_shapes if ps.role == "Selected"
-                    for u in ps.shape.units if u.values[0] is not None), None)
+    sel_val = next((u.values[0] for ps in population_shapes if ps.population_label == "Selected"
+                    for u in ps.units if u.values[0] is not None), None)
     stats = {
         "Lower Quartile": round(ms.q1,    1) if ms.q1     is not None else None,
         "Mean":           round(ms.mean,  1) if ms.mean   is not None else None,
@@ -441,7 +440,7 @@ def violin_plot(population_shapes: list, width=50, height=50, tweaks=[], report_
 
 def ugly_bar(population_shapes: list, width=80, height=40, tweaks=[], report_context=None):
     """Horizontal bar — component breakdown (sample average)."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig, ax = plt.subplots(figsize=(w, h))
     metric = base.metrics[0]
@@ -472,7 +471,7 @@ def ugly_bar(population_shapes: list, width=80, height=40, tweaks=[], report_con
 
 def radar_chart(population_shapes: list, width=55, height=55, tweaks=[], report_context=None):
     """Radar / spider chart — component values on radial axes."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig = plt.figure(figsize=(w, h))
     metric = base.metrics[0]
@@ -503,7 +502,7 @@ def radar_chart(population_shapes: list, width=55, height=55, tweaks=[], report_
 
 def donut_component(population_shapes: list, width=55, height=55, tweaks=[], report_context=None):
     """Donut chart showing component proportions."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig, ax = plt.subplots(figsize=(w, h))
     metric = base.metrics[0]
@@ -530,7 +529,7 @@ def donut_component(population_shapes: list, width=55, height=55, tweaks=[], rep
 
 def lollipop_chart(population_shapes: list, width=70, height=40, tweaks=[], report_context=None):
     """Lollipop chart — stem and dot per component."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig, ax = plt.subplots(figsize=(w, h))
     metric = base.metrics[0]
@@ -559,7 +558,7 @@ def lollipop_chart(population_shapes: list, width=70, height=40, tweaks=[], repo
 
 def waffle_chart(population_shapes: list, width=60, height=50, tweaks=[], report_context=None):
     """Waffle chart — 10×10 grid, each cell ≈ 1%."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig, ax = plt.subplots(figsize=(w, h))
     metric = base.metrics[0]
@@ -600,7 +599,7 @@ def waffle_chart(population_shapes: list, width=60, height=50, tweaks=[], report
 
 def yn_bar(population_shapes: list, width=80, height=55, tweaks=[], report_context=None):
     """Horizontal stacked Yes/No bar per question."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig, ax = plt.subplots(figsize=(w, h))
     questions, yes_pcts, no_pcts = [], [], []
@@ -636,7 +635,7 @@ def yn_bar(population_shapes: list, width=80, height=55, tweaks=[], report_conte
 
 def list_pie(population_shapes: list, width=50, height=55, tweaks=[], report_context=None):
     """Pie chart — category proportions for a single metric."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig, ax = plt.subplots(figsize=(w, h))
     metric = base.metrics[0]
@@ -670,7 +669,7 @@ def list_pie(population_shapes: list, width=50, height=55, tweaks=[], report_con
 
 def diverging_bar(population_shapes: list, width=80, height=55, tweaks=[], report_context=None):
     """Diverging bar — Yes right / No left from centre axis."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig, ax = plt.subplots(figsize=(w, h))
     questions, yes_pcts, no_pcts = [], [], []
@@ -704,7 +703,7 @@ def diverging_bar(population_shapes: list, width=80, height=55, tweaks=[], repor
 
 def dot_matrix(population_shapes: list, width=80, height=55, tweaks=[], report_context=None):
     """Dot matrix — filled dots per category per question, each dot ≈ 10%."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     is_yn = (len(base.metrics) > 1 and
              base.metrics[0].category_names == ["Yes", "No"])
@@ -752,7 +751,7 @@ def dot_matrix(population_shapes: list, width=80, height=55, tweaks=[], report_c
 
 def donut_pie(population_shapes: list, width=50, height=55, tweaks=[], report_context=None):
     """Donut ring chart."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig, ax = plt.subplots(figsize=(w, h))
     metric = base.metrics[0]
@@ -782,7 +781,7 @@ def donut_pie(population_shapes: list, width=50, height=55, tweaks=[], report_co
 
 def treemap(population_shapes: list, width=65, height=45, tweaks=[], report_context=None):
     """Treemap — area-proportional category rectangles."""
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     w, h = _size_to_inches(width, height)
     fig, ax = plt.subplots(figsize=(w, h))
     metric = base.metrics[0]
@@ -823,7 +822,7 @@ def bead_string_dot_plot(population_shapes: list, width=80, height=40, tweaks=[]
         ax.text(0.5, 0.5, "No data", ha="center", va="center")
         return _fig_to_bytes(fig), {}
 
-    base = population_shapes[0].shape
+    base = population_shapes[0]
     ms   = base.metric_stats[0] if base.metric_stats else None
     vals = [u.values[0] for u in base.units if u.values[0] is not None]
     if not vals:
@@ -839,20 +838,20 @@ def bead_string_dot_plot(population_shapes: list, width=80, height=40, tweaks=[]
     tiers = []
     peer_colour_idx = 0
     for ps in population_shapes:
-        tier_vals = [u.values[0] for u in ps.shape.units if u.values[0] is not None]
+        tier_vals = [u.values[0] for u in ps.units if u.values[0] is not None]
         if not tier_vals:
             continue
-        if ps.role == "All":
+        if ps.population_label == "All":
             tiers.append({"vals": tier_vals, "dot": COLOUR_ALL, "string": STRING_ALL,
                           "label": "All organisations", "opaque": False})
-        elif ps.role == "Selected":
+        elif ps.population_label == "Selected":
             tiers.append({"vals": tier_vals, "dot": COLOUR_SEL, "string": STRING_SEL,
-                          "label": ps.label or "Selected", "opaque": True})
+                          "label": ps.population_label or "Selected", "opaque": True})
         else:
             raw = PEER_COLOURS[peer_colour_idx % len(PEER_COLOURS)]
             r, g, b = mcolors.to_rgb(raw)
             tiers.append({"vals": tier_vals, "dot": (r, g, b, 0.42), "string": (r, g, b, 0.20),
-                          "label": ps.label, "opaque": False})
+                          "label": ps.population_label, "opaque": False})
             peer_colour_idx += 1
 
     if not tiers:

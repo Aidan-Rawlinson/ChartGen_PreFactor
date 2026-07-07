@@ -102,7 +102,7 @@ MyWorkfile.cgw  (ZIP)
 
 - **Data shape** — a data container for normalised chart data. See Functional Spec, Section 8.
 
-- **Population shape (`PopulationShape`)** — one filtered, stats-recalculated copy of a data shape representing a single population layer (e.g. "all units," "Welsh units," "the selected unit"), produced by `build_population_shapes` and consumed by chart rendering. See Functional Spec, Section 10.4, and the Architecture document, Section 5.
+- **Population label (`population_label`)** — a field on the data shape itself identifying which population layer a filtered copy represents (e.g. `"All"`, `"Selected"`, a resolved peer-group value), set by `build_population_shapes`. See Functional Spec, Section 10.4, and the Architecture document, Section 5.
 
 - **Populations string** — the `^`-delimited ordered list of tokens (e.g. `All^Region()^Selected`) that specifies which population shapes are sent to the chart engine. See Functional Spec, Section 10.4.
 

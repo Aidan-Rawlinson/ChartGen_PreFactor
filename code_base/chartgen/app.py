@@ -1201,7 +1201,7 @@ with tab_charts:
                 chart_ref = type_options[selected_desc]
                 from modules.m12_local_config.local_config import build_report_context
                 from modules.m06_assembly_engine.assembly_engine import build_population_shapes
-                from modules.m04_data_shapes.shapes import PopulationShape
+                from dataclasses import replace as _replace
 
                 _units_local = _units()
                 _rc = build_report_context(_settings(), _units_local)
@@ -1214,7 +1214,7 @@ with tab_charts:
                 except Exception:
                     _pop_shapes = []
                 if not _pop_shapes:
-                    _pop_shapes = [PopulationShape(role="All", label="All", shape=shape)]
+                    _pop_shapes = [_replace(shape, population_label="All")]
 
                 with st.spinner("Rendering…"):
                     image_bytes, autotable_stats = render_chart(

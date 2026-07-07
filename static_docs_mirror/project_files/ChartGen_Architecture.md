@@ -192,10 +192,8 @@ Streamlit process (st.session_state)
     │     organisation_id: str
     │     organisation_name: str
     │
-    └── list[PopulationShape]
-          role: str
-          label: str
-          shape: NumericSeries | NumericCompositional | CategoricalCompositional
+    └── list[NumericSeries | NumericCompositional | CategoricalCompositional]
+          population_label: str  — set per layer by build_population_shapes
 ```
 
 | Item | Notes |
@@ -213,12 +211,10 @@ Streamlit process (st.session_state)
 | `AssemblyContext.report_context: ReportContext` | Rebuilt per report, see below |
 | `AssemblyContext.excel_workbooks: dict` | Added dynamically by `open_excel`, Insert From Excel |
 | `ReportContext` | One per **report** (rebuilt fresh per unit, from the per-report settings dict, never from `load_settings()` — batch overrides apply correctly) |
-| `list[PopulationShape]` | One list per `insert_chart` call — built fresh by `build_population_shapes()` each time, never cached or reused |
-| `PopulationShape.role: str` | e.g. `"All"`, `"Region()"`, `"Selected"` |
-| `PopulationShape.label: str` | Resolved value, e.g. `"London"` |
-| `PopulationShape.shape` | Filtered copy, stats recalculated against this population only |
+| `list[data shape]` | One list per `insert_chart` call — built fresh by `build_population_shapes()` each time; each entry is a filtered copy of the chart's data shape, stats recalculated |
+| `population_label: str` | Field on the data shape itself — e.g. `"All"`, `"Selected"`, or a resolved peer-group value |
 
-Only `WorkfileState` (Decision 1) holds real state. `AssemblyContext`, `ReportContext`, and `PopulationShape` lists are just rebuilt from it on every run, the way any app rebuilds working objects from its underlying data rather than treating them as sources of truth in their own right. If the Streamlit process dies mid-session, everything here is gone except whatever was already saved.
+Only `WorkfileState` (Decision 1) holds real state. `AssemblyContext`, `ReportContext`, and population-filtered data shape lists are just rebuilt from it on every run, the way any app rebuilds working objects from its underlying data rather than treating them as sources of truth in their own right. If the Streamlit process dies mid-session, everything here is gone except whatever was already saved.
 
 ---
 
