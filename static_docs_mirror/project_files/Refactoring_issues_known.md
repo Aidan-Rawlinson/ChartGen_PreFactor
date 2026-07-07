@@ -51,6 +51,8 @@ This document is split into two parts: items being handled in the ChartGen_PreFa
 
 Done — resolved as **scope-plus-independent-layers**: the first populations-string token defines the full comparison scope; every subsequent token, including `Selected`, resolves independently against that scope rather than against each other or cumulatively. `Name(Value)` explicit-value tokens are now implemented alongside the existing `Name()` form, via the same resolution path. Unresolvable tokens remain silently skipped, not warned (clean data flows preferred — see Decisions log). `build_population_shapes` (`assembly_engine.py`) rewritten accordingly, and shortened in the process; Functional Spec §10.4 updated to match. Separately, `unit_id` was found and fixed to be inconsistently typed (int at the API/chart-data boundary, string once round-tripped through CSV) — now coerced to string at ingestion throughout, which was the actual cause of populations resolving to zero units during testing. The Running Order populations multi-select (`app.py`) now offers every discovered peer-group value generically for any `Name()` column, not just `Region()`.
 
+A follow-on decision, made after this session closed: peer groups are a single mechanism, not two. There is no separate binary/flag column type — a simple yes/no group (e.g. Shelford Group) is authored as an ordinary `Name()` column, with a lowercase `x` (or a blank) marking units that don't belong to any group for that column. Both are treated identically and excluded from peer-group value discovery. `get_peer_group_value_options` (`local_config.py`) and `build_population_shapes`'s empty-bracket resolution (`assembly_engine.py`) were updated accordingly. Documentation describing a binary/flag column type (Functional Spec §7.2, Feature List, Glossary) has been corrected to describe this single mechanism.
+
 ### Session 5 — PopulationShape redesign
 
 * `PopulationShape` redesign — currently a separate wrapper type (`role`, `label`, `shape` fields) produced by `build_population_shapes`. Proposal: retire the wrapper and add `population_role`/`population_label` as native fields directly on `data_shape` instead — a data shape always represents some population; this should be a normal property of any instance, not a distinct filtered variant. Not yet implemented — current code still uses `PopulationShape` as described in the Architecture and Functional Spec documents.
@@ -62,7 +64,6 @@ Done — resolved as **scope-plus-independent-layers**: the first populations-st
 ### Session 7 — Peer group / reference data
 
 * Storing `organisations.csv` — flagged as disliked; reconsider this approach.
-* Binary peer group review logic.
 
 ### Session 8 — Placeholder simplification
 

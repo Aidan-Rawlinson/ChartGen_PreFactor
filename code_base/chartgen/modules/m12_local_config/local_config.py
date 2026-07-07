@@ -35,7 +35,8 @@ def get_peer_group_value_options(units: list) -> list:
     """
     Return populations-string tokens for every peer group column, in column order.
     For each Name() column, yields the bare token first, then one Name(Value) token
-    per distinct non-blank value present in that column, sorted alphabetically.
+    per distinct value present in that column, sorted alphabetically, excluding
+    blank and 'x' (both mean the unit has no group for that column).
     Does not include 'All' or 'Selected' — callers add those.
     """
     if not units:
@@ -44,7 +45,10 @@ def get_peer_group_value_options(units: list) -> list:
     for col in get_peer_group_columns(units):
         name = col[:-2]  # strip trailing "()"
         options.append(col)
-        values = sorted({(r.get(col) or "").strip() for r in units if (r.get(col) or "").strip()})
+        values = sorted({
+            (r.get(col) or "").strip() for r in units
+            if (r.get(col) or "").strip() and (r.get(col) or "").strip() != "x"
+        })
         options.extend(f"{name}({v})" for v in values)
     return options
 

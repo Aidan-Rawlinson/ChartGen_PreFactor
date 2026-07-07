@@ -44,7 +44,7 @@ MyWorkfile.cgw  (ZIP)
 
 - **Normalisation** — bringing data from different sources into a single, consistent structure and format. See the Primer, Section 3; see also Data shape.
 
-- **Peer group** — a named subset of the population. See Functional Spec, Section 7.2, for the `Name()` column mechanism.
+- **Peer group** — a named subset of the population, defined by a `Name()` column (e.g. `Region()`, `Shelford Group()`). A unit with no group for that column is marked `x` (or left blank) rather than assigned one. See Functional Spec, Section 7.2.
 
 - **Population** — the set of units being compared. A single output may include analysis of multiple different populations, usually in a hierarchical relationship (e.g. Regions, Organisations, and Emergency Departments). See the Primer, Section 3.
 
@@ -126,7 +126,7 @@ MyWorkfile.cgw  (ZIP)
 
 - **ReportContext** — the per-report identity object (`unit_id`, `unit_code`, `unit_name`, `organisation_id`, `organisation_name`), rebuilt fresh for each unit in a batch run and passed to chart rendering and text replacement.
 
-- **Unit / unit ID / unit code** — the identifier fields for a single reporting unit, resolved from the API's submission data at workfile setup and used throughout ChartGen from that point on. `unit_id` is the internal numeric identifier; `unit_code` is the outward-facing label (used for display only, never relied on for logic); `unit_name` is the display name (e.g. Trust name). See Data Acquisition, Functional Spec §7.2.
+- **Unit / unit ID / unit code** — the identifier fields for a single reporting unit, resolved from the API's submission data at workfile setup and used throughout ChartGen from that point on. `unit_id` is the internal identifier; `unit_code` is the outward-facing label (used for display only, never relied on for logic); `unit_name` is the display name (e.g. Trust name). See Data Acquisition, Functional Spec §7.2.
 
 ### Cluster 10 — Chart construction
 

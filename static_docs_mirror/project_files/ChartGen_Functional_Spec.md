@@ -124,10 +124,7 @@ The reporting units CSV (`units.csv`) is the manifest the system iterates over d
 - **ID** — unique numeric identifier, used internally
 - **Code** — outward-facing identifier; used for labels only, not relied on for logic
 
-Additional columns define peer group membership. Two column types are supported:
-
-- **`Name()` columns** — multi-value peer groups, e.g. `Region()` — the unit belongs to the named group its value states. These are resolved automatically from the organisations reference data at setup time and appear in the Running Order populations multi-select.
-- **Flag columns** — binary 1/0, e.g. `Shelford Group` — unit is or is not a member. Resolution in `build_population_shapes` is not yet implemented.
+Additional columns define peer group membership. Every peer group — however many named values it has, including a simple yes/no group — is a `Name()` column: the unit belongs to the named group its value states. A unit with no group for that column is marked `x` (or left blank) rather than assigned one; both are treated identically and excluded from the Running Order populations multi-select.
 
 `Region()` is the first peer group column, resolved from `GET /organisations?year={year}` during the New Workfile flow (Section 4) and written permanently into `units.csv` at save time. Additional `Name()` columns can be added to `units.csv` and will be picked up automatically by `build_population_shapes` and the Running Order dialog without code changes.
 

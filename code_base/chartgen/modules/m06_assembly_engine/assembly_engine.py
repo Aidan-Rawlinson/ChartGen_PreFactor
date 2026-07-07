@@ -68,7 +68,7 @@ def build_population_shapes(data_shape, populations_str: str,
                 if not selected_id or selected_id not in unit_lookup:
                     return None
                 value = unit_lookup[selected_id].get(col, "")
-                if not value:
+                if not value or value == "x":  # 'x' marks deliberate absence, same as blank
                     return None
             ids = {
                 r["unit_id"] for r in units
