@@ -269,7 +269,6 @@ def _pick_folder() -> str:
 
 def _show_new_workfile_form():
     from modules.m01_data_acquisition.api_client import get_projects, get_submissions, get_organisations
-    from modules.constants_temp.constants_temp import ORGANISATIONS_FIELDNAMES as ORG_FIELDS
 
     st.caption("All fields required.")
 
@@ -363,12 +362,8 @@ def _show_new_workfile_form():
             "batch_cursor":            "0",
         }
 
-        ws_new.organisations = [
-            {f: row.get(f, "") for f in ORG_FIELDS} for row in org_rows
-        ]
-
-        # Pull raw submission rows from the API (external contract: submission_id/code/name)
-        # and normalise into the internal unit-based roster from this point on.
+        # Organisation data is fetched only to resolve Region() onto units —
+        # the lookup is used once, in memory, and not retained beyond this.
         org_lookup = {str(r["organisation_id"]): r for r in org_rows}
         rows_out = []
         for row in submission_rows:

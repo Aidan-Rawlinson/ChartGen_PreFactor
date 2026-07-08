@@ -228,17 +228,16 @@ def _is_chart_placeholder(shape) -> bool:
     """Return True if this shape is a placeholder ChartGen should treat as a chart slot."""
     if not shape.is_placeholder:
         return False
-    name_lower = shape.name.lower()
-    # Explicit chart naming convention
-    if name_lower.startswith("chart"):
-        return True
-    # PowerPoint placeholder types that can hold images/objects
     ph_type = shape.placeholder_format.type
     _content_types = {
         PP_PLACEHOLDER.OBJECT,
         PP_PLACEHOLDER.PICTURE,
         PP_PLACEHOLDER.CHART,
         PP_PLACEHOLDER.BITMAP,
+        PP_PLACEHOLDER.TABLE,
+        PP_PLACEHOLDER.ORG_CHART,
+        PP_PLACEHOLDER.MEDIA_CLIP,
+        PP_PLACEHOLDER.BODY,
     }
     return ph_type in _content_types
 

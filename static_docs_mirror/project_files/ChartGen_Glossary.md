@@ -86,7 +86,7 @@ MyWorkfile.cgw  (ZIP)
 
 - **Cleaned template** — the version of a `.pptx` template with all yellow annotation textboxes stripped out. The Assembly Engine always runs from this version, never the original marked-up template.
 
-- **Placeholder** — a named PowerPoint placeholder that the Running Order references by name for content insertion.
+- **Placeholder** — a PowerPoint placeholder ChartGen recognises by its native type (Content, Picture, Chart, Clip Art, Table, SmartArt, Media, or Text), not by its name. The Running Order references it by name for display only. See Functional Spec, Section 6.2.
 
 - **Yellow textbox convention** — the template-authoring method of placing a yellow-filled textbox inside a placeholder to associate it with a data source (URL), image path, or Excel range.
 

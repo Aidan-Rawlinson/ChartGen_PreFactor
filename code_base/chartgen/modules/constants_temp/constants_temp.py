@@ -1,6 +1,6 @@
 """
 constants_temp.py
-Column-order constants for the units and organisations reference tables.
+Column-order constants for the units reference table.
 """
 
 UNITS_FIELDNAMES = [
@@ -19,12 +19,4 @@ UNITS_FIELDNAMES = [
     "service_item_names",
     "service_response_counts",
     "Region()",
-]
-
-ORGANISATIONS_FIELDNAMES = [
-    "organisation_id",
-    "organisation_name",
-    "nhs_code",
-    "organisation_type_name",
-    "region_name",
 ]

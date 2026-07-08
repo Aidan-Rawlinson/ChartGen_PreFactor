@@ -30,7 +30,6 @@ class WorkfileState:
     settings: dict = field(default_factory=dict)
     urls: list = field(default_factory=list)          # list of {url, label}
     units: list = field(default_factory=list)         # list of dicts
-    organisations: list = field(default_factory=list) # list of dicts
     running_order_rows: list = field(default_factory=list)  # list of dicts (CSV rows)
 
     # data_cache/
@@ -148,7 +147,6 @@ def open_workfile(workfile_path: str) -> WorkfileState:
         state.settings         = _key_value_csv_to_dict(_read("workfile_config/settings.csv"))
         state.urls             = _url_csv_to_list(_read("workfile_config/urls.csv"))
         state.units            = _csv_to_rows(_read("workfile_config/units.csv"))
-        state.organisations    = _csv_to_rows(_read("workfile_config/organisations.csv"))
         state.running_order_rows = _csv_to_rows(_read("workfile_config/running_order.csv"))
         for _row in state.running_order_rows:
             _row["enabled"] = 1 if str(_row.get("enabled", "1")).strip() in ("1", "True", "true", "yes") else 0
@@ -243,9 +241,7 @@ def save_workfile(state: WorkfileState, username: str, target_path: str = None):
     Serialise WorkfileState back to the .cgw ZIP, updating last_saved_by/at but not lock fields.
     target_path overrides state.workfile_path (used by Save As).
     """
-    from modules.constants_temp.constants_temp import (
-        UNITS_FIELDNAMES as UNIT_FIELDS, ORGANISATIONS_FIELDNAMES as ORG_FIELDS
-    )
+    from modules.constants_temp.constants_temp import UNITS_FIELDNAMES as UNIT_FIELDS
 
     now = datetime.now(timezone.utc).isoformat()
     state.last_saved_by = username
@@ -262,8 +258,6 @@ def save_workfile(state: WorkfileState, username: str, target_path: str = None):
         _write("workfile_config/urls.csv",           _url_list_to_csv(state.urls))
         _write("workfile_config/units.csv",
                _rows_to_csv(state.units, UNIT_FIELDS) if state.units else "")
-        _write("workfile_config/organisations.csv",
-               _rows_to_csv(state.organisations, ORG_FIELDS) if state.organisations else "")
 
         # running_order — derive fieldnames from rows if present
         if state.running_order_rows:
@@ -331,7 +325,6 @@ def _write_empty_cgw(workfile_path: str, workfile_name: str):
             "workfile_config/settings.csv",
             "workfile_config/urls.csv",
             "workfile_config/units.csv",
-            "workfile_config/organisations.csv",
             "workfile_config/running_order.csv",
             "data_cache/manifest.json",
         ]:

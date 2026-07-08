@@ -85,7 +85,6 @@ MyWorkfile.cgw  (ZIP)
 │   ├── settings.csv
 │   ├── urls.csv
 │   ├── units.csv
-│   ├── organisations.csv
 │   └── running_order.csv
 ├── data_cache/
 │   ├── manifest.json
@@ -100,7 +99,6 @@ MyWorkfile.cgw  (ZIP)
 | `workfile_config/settings.csv` | key,value — paths, year, project_id, batch_cursor, etc. |
 | `workfile_config/urls.csv` | Toolkit URLs (populated by yellow-box extraction) |
 | `workfile_config/units.csv` | Population table — one row per reporting unit, `Region()` column |
-| `workfile_config/organisations.csv` | Organisation reference data (resolves `Region()`) |
 | `workfile_config/running_order.csv` | ★ Canonical Running Order store — flat table, not `.xlsx`. The `.xlsx` is generated from this on demand for download and parsed back into it on upload; it is never itself written to this archive |
 | `data_cache/manifest.json` | Index: tier_id, group, option, label, shape_type, url, last_fetched — per cached chart |
 | `data_cache/{tier_id}_{group}_{option}.json` | One file per fetched chart — serialised data shape |
@@ -145,7 +143,7 @@ outputs/
 | `outputs/pptx/` | Generated `.pptx` reports, one per batch run output. Recreated fresh wherever the `.cgw` currently lives, including after a Save As — not carried across |
 | `outputs/pdf/` | Generated `.pdf` reports. Recreated fresh wherever the `.cgw` currently lives, including after a Save As — not carried across |
 
-**CSV vs JSON.** `running_order.csv`, `units.csv`, `organisations.csv`: flat, fixed-column, one-row-per-entity — CSV's natural shape, and legible to a non-technical colleague who renames `.cgw` to `.zip`. `data_cache/*.json`: nested (serialised dataclasses), never hand-edited. Intentional split, not an inconsistency.
+**CSV vs JSON.** `running_order.csv`, `units.csv`: flat, fixed-column, one-row-per-entity — CSV's natural shape, and legible to a non-technical colleague who renames `.cgw` to `.zip`. `data_cache/*.json`: nested (serialised dataclasses), never hand-edited. Intentional split, not an inconsistency.
 
 ---
 
@@ -160,7 +158,6 @@ Streamlit process (st.session_state)
 │     settings: dict
 │     urls: list[dict]
 │     units: list[dict]
-│     organisations: list[dict]
 │     running_order_rows: list[dict]
 │     manifest: dict
 │     cache: dict — {filename: json_string}
