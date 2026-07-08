@@ -25,7 +25,8 @@ Structured in pipeline order: application/session foundations, then workfile set
 |---|---|---|
 | `.bat` launcher | Complete | |
 | Workfile file format (`.cgw`) | Complete | See Architecture document. |
-| Concurrency via `workfile_info.json` lock fields | Partial | See Architecture Decisions 4–5. Further development to be undertaken to optimise approach. |
+| Concurrency via `workfile_info.json` lock fields | Partial | See Architecture Decisions 4–6. The lock itself remains advisory and is not re-checked after Open. |
+| Read-Only workfile access | Complete | See Architecture Decision 6. Offered on every Open regardless of lock state; enforcement is shallow (Save disabled only). |
 | Sidebar file operations (New, Open, Save, Save As, Save and Close, Close Without Saving) | Complete | See Architecture Decision 6. |
 | Outputs folder structure (`outputs/pptx/`, `outputs/pdf/`) | Complete | Auto-created alongside the workfile on first run. |
 | SharePoint/OneDrive compatibility | Complete | See Architecture Decision 8. |

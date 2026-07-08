@@ -34,7 +34,7 @@ The Streamlit UI provides access to all workflow stages. Tab names follow a dual
 
 ### 3.1 Sidebar File Operations
 
-File operations sit in the sidebar, independent of the active tab; with no workfile open, tabs remain visible but empty. New Workfile, Open Workfile, Save, Save As, Save and Close, and Close Without Saving cover the full lifecycle. New Workfile triggers the New Workfile flow (Section 4); Save As prompts for a save location; Open Workfile and Close prompt to save first if the current workfile is dirty.
+File operations sit in the sidebar, independent of the active tab; with no workfile open, tabs remain visible but empty. New Workfile, Open Workfile, Save, Save As, Save and Close, and Close Without Saving cover the full lifecycle. New Workfile triggers the New Workfile flow (Section 4); Save As prompts for a save location; Open Workfile and Close prompt to save first if the current workfile is dirty. Open Workfile leads to the concurrency decision step (Section 5) before a workfile loads.
 
 ### 3.2 Tab Structure
 
@@ -61,7 +61,17 @@ Creating a new workfile is one step: year and project selection, a native folder
 
 ## 5. Concurrency
 
-Locking is advisory only. Each open workfile writes a lock recording who holds it and when. A second user opening that workfile sees a warning naming the holder and can proceed anyway — last-write-wins if both save. A crash leaves the lock stale until the next person sees the same warning.
+Locking is advisory only. Opening a workfile always leads to a decision step before it loads, naming one of three lock states and offering Open or Open Read-Only:
+
+- not marked open by anyone;
+- marked open by the current user — the prior session either did not close cleanly, or is still open elsewhere under the same account, indistinguishable from the lock alone;
+- marked open by a different user, with their name and the time last marked open.
+
+Choosing Open writes the lock and proceeds as a normal editable session — last-write-wins if two users both save. Choosing Open Read-Only opens the workfile without claiming the lock.
+
+A Read-Only session disables Save only; every other action behaves as normal, so edits made are lost unless rescued via Save As. Save As from a Read-Only session must target a folder different from the original workfile's, to avoid two workfiles sharing an outputs folder, and converts the session to a normal editable one, writing the lock at the new location.
+
+A crash or an uncleanly closed browser tab leaves the lock as last written; the next person to open the file sees this as the same decision step.
 
 ---
 

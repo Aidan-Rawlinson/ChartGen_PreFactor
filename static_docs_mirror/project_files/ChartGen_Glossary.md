@@ -78,6 +78,8 @@ MyWorkfile.cgw  (ZIP)
 
 - **Data Cache** — the physical, on-disk store of fetched chart data: `data_cache/manifest.json` and one JSON file per chart shape dataset, inside the `.cgw`. Constitutes the data side of the Workfile domain when the file is closed. Mirrored in memory by `WorkfileState.cache`/`.manifest` while the workfile is open.
 
+- **Read-Only** — a workfile session opened without claiming the advisory lock. Only Save is disabled; every other action behaves as in a normal session. See Functional Spec, Section 5.
+
 - **WorkfileState** — the in-memory Python object holding the complete working state of an open `.cgw`. The sole interface other modules use to read or write workfile data during a session. See the Architecture document, Section 5.
 
 ### Cluster 5 — Template & placeholders

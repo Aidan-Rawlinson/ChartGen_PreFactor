@@ -170,6 +170,7 @@ Streamlit process (st.session_state)
 │     locked_by
 │     locked_at
 │     dirty: bool
+│     read_only: bool
 │
 ├── st.session_state["token"]
 ├── st.session_state[...UI flags...]
@@ -204,6 +205,7 @@ Streamlit process (st.session_state)
 | `WorkfileState.manifest: dict` | Mirrors `data_cache/manifest.json` |
 | `WorkfileState.cache: dict` — `{filename: json_string}` | Mirrors `data_cache/*.json` |
 | `WorkfileState.dirty: bool` | Not persisted — session-only flag |
+| `WorkfileState.read_only: bool` | Not persisted — session-only. True only for a session opened via Open Read-Only; such a session never writes or clears the lock. |
 | `st.session_state["token"]` | API session token (Decision 7) — never the password |
 | `st.session_state[...UI flags...]` | `show_new_form`, `ro_selected_idx`, etc. — disposable, no domain meaning beyond this widget render |
 | Per-batch-run objects | Live only for the duration of one Run Selected / Run Batch / Run All call — constructed fresh, discarded after |
@@ -254,7 +256,7 @@ Sits in the root of the `.cgw`, stored uncompressed (`ZIP_STORED`), so it can be
 
 Serves two purposes: session metadata (audit trail, sidebar display) and concurrency signalling (soft lock). Contents shown in Section 4.
 
-`locked_by`/`locked_at` are written when a user opens the workfile and cleared when they close it. When `locked_by` is present, a second user opening the file sees an advisory warning naming the holder and the time — they can cancel or proceed. A hard block is not appropriate, since the lock may be stale (crash, force-quit) with no automatic way to distinguish a live lock from an orphaned one.
+`locked_by`/`locked_at` are written when a user opens the workfile and cleared when they close it. When `locked_by` is present, the user opening the file sees an advisory decision step naming the holder and the time — they can choose to open normally or open Read-Only. A hard block is not appropriate, since the lock may be stale (crash, force-quit) with no automatic way to distinguish a live lock from an orphaned one.
 
 **Why inside the ZIP, not a sibling file.** A sibling lock file would be visible on SharePoint as a separate item, and a source of confusion for colleagues. The lock fields inside `workfile_info.json` are invisible to anyone not opening the workfile in ChartGen — the right audience for the warning.
 
@@ -264,7 +266,7 @@ Lock behaviour for each sidebar operation, and for a crash, is in Decision 6.
 
 Managed entirely via the lock fields in Decision 4 — no external lock file.
 
-The model is advisory: a second user is warned the workfile appears open but can proceed if they judge it safe. Last-write-wins applies if two users genuinely work concurrently and both save — acceptable for a small team with normal verbal coordination. A hard concurrency lock is explicitly out of scope. Per-operation lock behaviour is in Decision 6.
+The model is advisory: opening a workfile always shows a decision step (Decision 6) naming the lock state, if any, and offering Open or Open Read-Only. Open Read-Only proceeds without claiming the lock. Last-write-wins applies if two users choose Open and both save — acceptable for a small team with normal verbal coordination. A hard concurrency lock is explicitly out of scope. Per-operation lock behaviour is in Decision 6.
 
 ### Decision 6 — File Operations and UI
 
@@ -273,15 +275,17 @@ File operations live in the Streamlit sidebar, tab-agnostic. The main tab interf
 | Operation | Behaviour |
 |---|---|
 | **New Workfile** | Prompts for save location and name, then runs the New Workfile flow. Submissions fetch is the final blocking step. |
-| **Open Workfile** | File picker for `.cgw`. Prompts to save first if a dirty workfile is already open. Shows an advisory warning if `locked_by` is present before login; writes the lock on success. |
-| **Save** | Serialise `WorkfileState` to ZIP, update `workfile_info.json`. No confirmation dialog. |
-| **Save As** | New folder/name via native picker. Copies the cleaned template alongside the new `.cgw` under the matching name; releases the lock on the old file, writes a new one. Outputs are not carried across. |
-| **Save and Close** | Save, then clear `locked_by`+`locked_at`, return to no-workfile-loaded state. |
-| **Close Without Saving** | Confirms if dirty. Clears the lock; ZIP otherwise untouched. |
+| **Open Workfile** | File picker for `.cgw`. Always leads to a decision step naming the lock state before the workfile loads, offering Open or Open Read-Only. Open writes the lock; Open Read-Only does not. |
+| **Save** | Serialise `WorkfileState` to ZIP, update `workfile_info.json`. No confirmation dialog. Disabled in a Read-Only session. |
+| **Save As** | New folder/name via native picker. Copies the cleaned template alongside the new `.cgw` under the matching name; releases the lock on the old file, writes a new one. Outputs are not carried across. In a Read-Only session, the target folder must differ from the original workfile's; on success the session becomes normal, and the old file's lock is released only if this session had held it. |
+| **Save and Close** | Save, then clear `locked_by`+`locked_at`, return to no-workfile-loaded state. Disabled in a Read-Only session. |
+| **Close Without Saving** | Confirms if dirty. Clears the lock; ZIP otherwise untouched. Skips the confirmation in a Read-Only session — closes immediately regardless of unsaved edits. |
 
 Buttons are active/inactive based on the state of the software.
 
-**Crash.** Lock fields remain as last written. A second user opening the workfile later sees the stale lock as the advisory warning described in Decision 4.
+**Crash.** Lock fields remain as last written. The next user opening the workfile sees the stale lock as the same decision step described above.
+
+**Read-Only sessions.** Offered on every Open regardless of lock state. Enforcement is shallow: Save is disabled; every other action behaves as normal, so unsaved edits are lost unless rescued via Save As. A Read-Only session never writes the lock, and therefore never clears one on close.
 
 ### Decision 7 — Credentials Location
 
