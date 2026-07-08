@@ -141,3 +141,41 @@
 
 **Decision:** Reference document updates for this session were kept deliberately short, describing the new `population_label` behaviour without expanded rationale or examples beyond what already existed.
 **Rationale:** Explicit user instruction — "keep that really short and concise... we should be simplifying behaviour" — treated as a standing steer for this specific documentation pass, not a change to the general Docs Maintenance Guide style rules.
+
+## Session 9 — [Date not specified]
+
+**Decision:** The immediate priority for this session is a single user losing their own unsaved work by closing the browser, not two users editing concurrently — despite "Concurrency review" being the session's pre-planned title.
+**Rationale:** User's explicit reframing after the initial review — the advisory lock mechanism only ever concerns a second opener; it does nothing for the more common failure mode of one person closing the browser without saving. Both problems were worked on this session, but as two genuinely separate mechanisms, not folded into one.
+
+**Decision:** A `beforeunload` browser warning on tab close is wanted, but was not implemented this session.
+**Rationale:** Agreed as a small, self-contained, low-risk addition (native browser prompt, gated on `ws.dirty`, no dependency, doesn't touch the lock). The conversation moved to the Read-Only/decision-screen request before it was built. Carried forward as outstanding, not rejected.
+
+**Decision:** Autosave/checkpoint mechanisms and a full idle-timer autosave were discussed as options but not pursued further this session.
+**Rationale:** Raised as part of the same "forgot to save" discussion as the `beforeunload` warning; the user did not pick either up as a next step. Not rejected outright — worth raising fresh rather than assuming a verdict either way.
+
+**Decision:** Opening a workfile always routes through a decision step in the main body offering **Open** or **Open Read-Only**, even when the file is not locked, rather than opening a clean file directly as before.
+**Rationale:** User's explicit request — Read-Only needed to be available on a clean file too ("if it's clean, I'd like the option of a read-only version"), not just as a locked-file fallback. Reusing one decision screen for all three lock states (clean / same-user / different-user), varying only the message shown above the buttons, was agreed as sufficient rather than building three separate flows — the user confirmed the same-user case should route to the same Open/Open Read-Only choice rather than a bespoke path.
+
+**Decision:** The same-user warning (locked by the current user) states that the file "was not closed down properly last time, or may still be open elsewhere under your account," holding both possibilities rather than asserting one.
+**Rationale:** The lock alone cannot distinguish a crashed/uncleanly-closed prior session from a genuinely live one elsewhere (another tab, another machine, under the same account) — there is no liveness signal anywhere in the system. Asserting either explanation with confidence would be misleading.
+
+**Decision:** Read-Only enforcement is shallow: only the Save button is disabled. Every other tab and action behaves exactly as in a normal session, so unsaved edits made in a read-only session are genuinely lost if not rescued via Save As.
+**Rationale:** User's explicit choice, drawing a direct parallel to Word and Excel's own read-only behaviour — "edit and lose" is the accepted model there, and there was no appetite for the much larger effort of gating every mutating widget across every tab individually.
+
+**Decision:** Save As remains available in a Read-Only session and is the only way out of it. It must target a folder different from the original workfile's folder (checked via directory comparison, not filename), and a successful Save As converts the session to a normal editable one — lock written at the new path, `read_only` cleared.
+**Rationale:** The different-folder requirement's real purpose, established through discussion, is avoiding two independent workfiles sharing the same `outputs/pptx`/`outputs/pdf` folder and mixing reports — not preventing `.cgw` overwrite, which the exact-path check already handled before this session. Converting to a normal session on successful Save As mirrors Word/Excel's own read-only-to-editable transition once a copy is saved elsewhere.
+
+**Decision:** A read-only session's Save As does not release the lock on the original file when moving away from it, unlike an ordinary (non-read-only) Save As, which does.
+**Rationale:** A read-only session never claimed that lock via `write_lock` in the first place, so clearing it on the way out would release a lock that may still genuinely belong to someone else (or, in the same-user case, one whose status the app can't actually verify). Only a session that itself holds the lock is entitled to release it.
+
+**Decision:** No "save changes?" confirmation is shown when closing a Read-Only session via Close Without Saving or Sign Out, even with unsaved edits present.
+**Rationale:** Proposed and explicitly rejected by the user — clicking Close or Sign Out is itself the decision and shouldn't be second-guessed. Also reasoned through as avoiding an inconsistency: since the tab-close path can never offer a save-changes prompt (no hook exists for it), adding one only to the in-app buttons would have made Read-Only's behaviour depend on which way the user chose to leave, which was judged worse than offering the confirmation nowhere.
+
+**Decision:** The persistent Read-Only indicator is a plain "READ-ONLY" label next to the "ChartGen" heading, with no name or timestamp shown alongside it.
+**Rationale:** User's explicit distinction — the label describes the file's current behaviour for the rest of the session, not the history that led to it. Who/when detail was already shown once, at the point the user chose to open read-only; repeating it in a persistent element would be restating the past rather than describing the present.
+
+**Decision:** The existing "dirty" terminology is not reused for the lock-not-cleanly-closed state; "locked" is used instead.
+**Rationale:** `WorkfileState.dirty` already has an established, different meaning (unsaved in-memory changes within the current session). The user's own proposed term for the new concept risked colliding with that; "locked" was adopted instead, aligning with the pre-existing `locked_by`/`locked_at` fields it actually describes.
+
+**Decision:** Reference document updates for Session 6 (Architecture, Functional Spec, Feature List, Refactoring Issues) are deferred to the next session rather than written now.
+**Rationale:** User confirmed the decision-screen and warning message wording is a first draft likely to be revised. Documenting exact copy now risks an immediate rewrite; the underlying decision logic (lock states, Read-Only scope, Save As folder rule) is stable and won't need re-doing regardless of wording changes.

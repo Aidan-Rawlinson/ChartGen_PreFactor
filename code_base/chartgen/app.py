@@ -178,11 +178,17 @@ with st.sidebar:
 
     ws = _ws()
     has_workfile = ws is not None
+    read_only = has_workfile and ws.read_only
 
     if has_workfile:
         workfile_label = ws.workfile_name or os.path.basename(ws.workfile_path)
         dirty_marker = " ●" if ws.dirty else ""
         st.markdown(f"**{workfile_label}**{dirty_marker}")
+        if read_only:
+            st.markdown(
+                "<span style='color:#c62828;font-weight:700;'>READ-ONLY</span>",
+                unsafe_allow_html=True,
+            )
         if ws.last_saved_by:
             st.caption(f"Saved by {ws.last_saved_by}")
             st.caption(_format_uk_time(ws.last_saved_at))
@@ -201,8 +207,9 @@ with st.sidebar:
 
     st.divider()
 
-    # Save / Save and Close / Close Without Saving — active only when a workfile is open
-    if st.button("Save", use_container_width=True, disabled=not has_workfile):
+    # Save / Save and Close are unavailable in a read-only session; Save As
+    # remains available so a read-only session can become a normal one.
+    if st.button("Save", use_container_width=True, disabled=not has_workfile or read_only):
         save_workfile(ws, st.session_state["username"])
         st.rerun()
 
@@ -210,7 +217,7 @@ with st.sidebar:
         st.session_state["show_save_as_form"] = True
         st.rerun()
 
-    if st.button("Save and close", use_container_width=True, disabled=not has_workfile):
+    if st.button("Save and close", use_container_width=True, disabled=not has_workfile or read_only):
         save_workfile(ws, st.session_state["username"])
         close_workfile(ws)
         st.session_state.pop("workfile_state", None)
@@ -218,7 +225,7 @@ with st.sidebar:
         st.rerun()
 
     if st.button("Close without saving", use_container_width=True, disabled=not has_workfile):
-        if has_workfile and ws.dirty:
+        if has_workfile and ws.dirty and not read_only:
             st.session_state["confirm_close_without_saving"] = True
         else:
             close_workfile(ws)
@@ -408,6 +415,11 @@ def _show_save_as_form():
     s = ws_cur.settings
 
     st.caption("Choose a new location and/or name. The cleaned PowerPoint template is copied alongside it.")
+    if ws_cur.read_only:
+        st.info(
+            "This is a read-only session. Saving into a different folder creates "
+            "a new, independent workfile that you can then edit normally."
+        )
 
     workfile_name = st.text_input(
         "Workfile name",
@@ -438,6 +450,7 @@ def _show_save_as_form():
     col_save, col_cancel = st.columns([1, 1])
 
     def _do_save_as(new_workfile_path: str, new_name: str):
+        was_read_only = ws_cur.read_only
         old_workfile_path = ws_cur.workfile_path
         old_template_path = (s.get("cleaned_template_path") or "").strip()
 
@@ -451,14 +464,18 @@ def _show_save_as_form():
         ws_cur.workfile_name = new_name
         write_lock(new_workfile_path, st.session_state["username"])
         ws_cur.locked_by = st.session_state["username"]
+        ws_cur.read_only = False
         save_workfile(ws_cur, st.session_state["username"], target_path=new_workfile_path)
 
-        # Release the lock on the old file — we've moved away from it
-        if old_workfile_path and old_workfile_path != new_workfile_path and os.path.exists(old_workfile_path):
-            try:
-                clear_lock(old_workfile_path)
-            except Exception:
-                pass
+        # Release the lock on the old file — only if this session held it.
+        # A read-only session never claimed the old file's lock, so it must
+        # never clear one that may still genuinely belong to someone else.
+        if not was_read_only:
+            if old_workfile_path and old_workfile_path != new_workfile_path and os.path.exists(old_workfile_path):
+                try:
+                    clear_lock(old_workfile_path)
+                except Exception:
+                    pass
 
         st.session_state.pop("show_save_as_form", None)
         st.session_state.pop("sa_save_folder_val", None)
@@ -475,6 +492,13 @@ def _show_save_as_form():
             errors.append("Please choose a save location.")
         elif not os.path.isdir(folder):
             errors.append(f"Save location not found: {folder}")
+        elif ws_cur.read_only:
+            original_folder = os.path.dirname(ws_cur.workfile_path)
+            if os.path.abspath(folder) == os.path.abspath(original_folder):
+                errors.append(
+                    "This is a read-only session — choose a different folder "
+                    "from the original workfile's location."
+                )
         if errors:
             for e in errors:
                 st.error(e)
@@ -526,6 +550,67 @@ def _pick_workfile_file() -> str:
         return ""
 
 
+def _clear_open_flow_state():
+    """Clear all session state used by the Open Workfile flow, including any pending decision."""
+    for k in ["show_open_form", "op_workfile_path_val", "op_pending_path", "op_pending_info"]:
+        st.session_state.pop(k, None)
+
+
+def _render_open_decision():
+    """Show the clean/locked decision step for a validated .cgw path, offering Open or Open Read-Only."""
+    path = st.session_state.get("op_pending_path")
+    if not path:
+        return
+
+    info = st.session_state.get("op_pending_info") or {}
+    locked_by = (info.get("locked_by") or "").strip()
+    locked_at = info.get("locked_at", "")
+    current_user = st.session_state["username"]
+
+    if not locked_by:
+        st.info("This workfile is not currently marked as open by anyone.")
+    elif locked_by == current_user:
+        st.warning(
+            "This workfile was not closed down properly last time it was used, "
+            "or it may still be open elsewhere under your account. Proceeding "
+            "may overwrite work if it is still open elsewhere. Choose Open "
+            "Read-Only if you are unsure."
+        )
+        st.caption(f"Last marked open: {_format_uk_time(locked_at)}")
+    else:
+        st.warning(
+            f"This workfile is currently marked as open by **{locked_by}** as of "
+            f"{_format_uk_time(locked_at)}. Opening it while they may still be "
+            "working in it could result in one of you losing changes. Choose "
+            "Open Read-Only to view without risk, or Open to take on that risk "
+            "yourself."
+        )
+
+    c1, c2, c3 = st.columns([1, 1, 1])
+
+    if c1.button("Open", type="primary", key="op_decision_open"):
+        write_lock(path, current_user)
+        ws_opened = open_workfile(path)
+        ws_opened.locked_by = current_user
+        ws_opened.read_only = False
+        st.session_state["workfile_state"] = ws_opened
+        _clear_open_flow_state()
+        _clear_workfile_session_state()
+        st.rerun()
+
+    if c2.button("Open Read-Only", key="op_decision_readonly"):
+        ws_opened = open_workfile(path)
+        ws_opened.read_only = True
+        st.session_state["workfile_state"] = ws_opened
+        _clear_open_flow_state()
+        _clear_workfile_session_state()
+        st.rerun()
+
+    if c3.button("Cancel", key="op_decision_cancel"):
+        _clear_open_flow_state()
+        st.rerun()
+
+
 def _show_open_workfile_form():
     col_browse2, col_clear2 = st.columns([2, 1])
     with col_browse2:
@@ -547,58 +632,23 @@ def _show_open_workfile_form():
 
     st.divider()
 
-    if st.button("Open", type="primary", key="op_open"):
-        path = st.session_state.get("op_workfile_path_val", "").strip()
-        if not path:
-            st.error("Please enter a path.")
-            return
-        if not os.path.exists(path):
-            st.error("File not found.")
-            return
-        if not path.endswith(".cgw"):
-            st.error("Please select a .cgw file.")
-            return
-
-        info = read_workfile_info(path)
-        if info.get("locked_by"):
-            st.session_state["op_lock_warning_path"] = path
-            st.session_state["op_lock_warning_info"] = info
-            st.rerun()
-        else:
-            write_lock(path, st.session_state["username"])
-            ws = open_workfile(path)
-            ws.locked_by = st.session_state["username"]
-            st.session_state["workfile_state"] = ws
-            st.session_state.pop("show_open_form", None)
-            st.session_state.pop("op_workfile_path", None)
-            _clear_workfile_session_state()
+    if not st.session_state.get("op_pending_path"):
+        if st.button("Open", type="primary", key="op_open"):
+            path = st.session_state.get("op_workfile_path_val", "").strip()
+            if not path:
+                st.error("Please enter a path.")
+                return
+            if not os.path.exists(path):
+                st.error("File not found.")
+                return
+            if not path.endswith(".cgw"):
+                st.error("Please select a .cgw file.")
+                return
+            st.session_state["op_pending_path"] = path
+            st.session_state["op_pending_info"] = read_workfile_info(path)
             st.rerun()
 
-    # Lock warning — shown inline, does not force re-login
-    lock_path = st.session_state.get("op_lock_warning_path")
-    if lock_path:
-        lock_info = st.session_state.get("op_lock_warning_info", {})
-        st.warning(
-            f"This workfile was opened by **{lock_info.get('locked_by', 'unknown')}** "
-            f"on {lock_info.get('locked_at', 'an unknown time')}. "
-            "Are you sure you want to open it?"
-        )
-        c1, c2 = st.columns(2)
-        if c1.button("Open anyway", type="primary", key="op_lock_confirm"):
-            write_lock(lock_path, st.session_state["username"])
-            ws = open_workfile(lock_path)
-            ws.locked_by = st.session_state["username"]
-            st.session_state["workfile_state"] = ws
-            st.session_state.pop("show_open_form", None)
-            st.session_state.pop("op_workfile_path", None)
-            st.session_state.pop("op_lock_warning_path", None)
-            st.session_state.pop("op_lock_warning_info", None)
-            _clear_workfile_session_state()
-            st.rerun()
-        if c2.button("Cancel", key="op_lock_cancel"):
-            st.session_state.pop("op_lock_warning_path", None)
-            st.session_state.pop("op_lock_warning_info", None)
-            st.rerun()
+    _render_open_decision()
 
 
 if st.session_state.get("confirm_close_without_saving"):
@@ -646,7 +696,18 @@ if not _has_workfile():
 # Main app — tabs
 # ---------------------------------------------------------------------------
 
-st.title("ChartGen")
+_ws_main = _ws()
+if _ws_main and _ws_main.read_only:
+    st.markdown(
+        '<div style="display:flex;align-items:baseline;gap:14px;">'
+        '<h1 style="margin:0;padding:0;">ChartGen</h1>'
+        '<span style="color:#c62828;font-weight:800;font-size:1.1em;'
+        'letter-spacing:0.05em;">READ-ONLY</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+else:
+    st.title("ChartGen")
 st.caption("Analysis and Reporting software")
 
 (tab_details, tab_config, tab_imports, tab_select,

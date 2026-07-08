@@ -48,6 +48,7 @@ class WorkfileState:
 
     # Session state — not persisted
     dirty: bool = False
+    read_only: bool = False   # True for sessions opened via "Open Read-Only"; never holds the lock
 
 
 # ---------------------------------------------------------------------------
@@ -360,7 +361,9 @@ def _write_empty_cgw(workfile_path: str, workfile_name: str):
 def close_workfile(state: WorkfileState):
     """
     Clear lock fields in the .cgw and discard the WorkfileState.
-    Called on both Save and Close and Close Without Saving routes.
+    Skipped for read-only sessions, which never claim the lock.
     """
+    if state.read_only:
+        return
     if state.workfile_path and os.path.exists(state.workfile_path):
         clear_lock(state.workfile_path)

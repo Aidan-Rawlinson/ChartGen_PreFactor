@@ -1,16 +1,22 @@
 <!-- Purpose: A snapshot of where the project stands right now -- what works, what is in progress, what is broken. Rewritten by Claude each session. -->
 
-## Status: In Progress — Refactoring Issues Session 5 (PopulationShape redesign) complete
+## Status: In Progress — Refactoring Issues Session 6 (Concurrency review) — code complete, documentation pending
 
-**Codebase:** `code_base/chartgen/` — `PopulationShape` wrapper retired:
+**Codebase:** `code_base/chartgen/` — a Read-Only path added to the existing advisory lock, plus a decision step on Open:
 
-- `population_label: Optional[str] = None` added directly to the three canonical data shapes (`NumericSeries`, `NumericCompositional`, `CategoricalCompositional`) in `m04_data_shapes/shapes.py`. The `PopulationShape` dataclass (`role`/`label`/`shape`) is removed.
-- `build_population_shapes` (`m06_assembly_engine/assembly_engine.py`) now returns the filtered data shapes directly, with `population_label` set via `dataclasses.replace` instead of wrapping each in `PopulationShape`. `insert_chart`'s no-populations-resolved fallback updated to match.
-- `role` was dropped rather than kept as `population_role` — it carried no information `label` didn't already have (identical to `label` for `All`/`Selected`; just the raw token text for peer-group tokens). Only `population_label` survives.
-- `base_charts.py` (all 17 Base Chart functions) and `app.py`'s Chart Preview fallback updated mechanically to match: every `ps.shape` → `ps`, every `ps.role`/`ps.label` → `ps.population_label`. No other logic in `base_charts.py` was touched — it remains flagged as due for a proper rewrite, not this session's scope.
-- Noted in passing, not fixed: `_layer_colour` in `base_charts.py` is defined but never called anywhere in the file — dead code pre-dating this session.
+- `WorkfileState.read_only: bool = False` added (`m14_workfile_file/workfile_file.py`) — session-only, not persisted, same treatment as `dirty`. A read-only session never calls `write_lock`, so it never claims the advisory lock.
+- `close_workfile` now returns immediately if `state.read_only` is set, before touching the lock — a read-only session must never clear a lock (its own stale one, or someone else's live one) that it never held.
+- Opening a workfile (`app.py`, `_show_open_workfile_form`) no longer opens directly. It validates the path, then hands off to a new decision step (`_render_open_decision`) rendered in the main body, which reads `workfile_info.json` and shows one of three messages before offering **Open** or **Open Read-Only**:
+  - Clean (no lock held): a neutral confirmation, no warning.
+  - Locked by the current user: a warning that the file was not closed down properly last time, or may still be open elsewhere under their account — both are indistinguishable from the lock alone, so the message covers both possibilities rather than asserting one.
+  - Locked by a different user: their name and last-marked-open time, with the choice framed as one of the two people potentially losing work if they choose Open over Open Read-Only.
+- Read-Only scope is shallow, matching Word/Excel: Save is disabled outright; every other tab behaves exactly as normal, so edits made in a read-only session are genuinely lost if not saved — no read-only enforcement anywhere else in the app.
+- Save As remains available in Read-Only and is the only way out of it. It now requires a folder different from the original workfile's folder (validated by comparing `os.path.dirname`, not by filename) — the actual reason is avoiding `outputs/pptx`/`outputs/pdf` collisions between two independent workfiles sharing a folder, not `.cgw` overwrite (which was already prevented for the exact-path case). On successful Save As, `read_only` flips to `False`, the lock is written at the new path, and the session becomes a normal editable one from that point — same pattern as Word/Excel "Save As while read-only".
+- A persistent red **READ-ONLY** label sits next to the "ChartGen" heading in the main body for the whole session (visible on every tab, since it renders above the tab bar) — describes the file's current behaviour, not its history, so it carries no name/timestamp detail; that was already shown once on the decision screen at open.
+- In a read-only session, Close Without Saving and Sign Out both proceed immediately with no confirmation dialog, even with unsaved edits — closing is treated as a deliberate decision, not one to second-guess.
+- Explored but deliberately not built this session: a `beforeunload` browser warning on tab close (still worth doing, unrelated to the lock, catches the "forgot to save" case that concurrency work doesn't touch), a Save-changes prompt at explicit close for read-only sessions (rejected — inconsistent with the decision above not to second-guess Close/Sign Out), and any autosave/checkpoint mechanism (not raised again this session).
 
-**Documentation:** Architecture §5 (in-memory structure diagram and table), Functional Spec §10.4 (chart data flow) and §8.1 (immutability note), Glossary Cluster 7 (`Population shape` entry renamed to `Population label`), and Refactoring Issues (Session 5 marked done) all updated to describe `population_label` on the data shape itself rather than a `PopulationShape` wrapper. Feature List and Primer confirmed unaffected. All written to the mirror and verified against the re-uploaded Project Files.
+**Documentation:** Not yet updated. Message wording used in the decision screen and warnings is expected to change before this is finalised, so Architecture, Functional Spec, Feature List, and Refactoring Issues have deliberately been left untouched this session rather than documenting copy that's likely to be rewritten. This is the one open item carried into next session — see Next_Session.md.
 
 **Git:** Repository on `C:\mcp_projects\ChartGen_PreFactor`. This session's work is committed as part of this close-down.
 
@@ -23,7 +29,7 @@
 | 3 | Remaining terminology renames | **Complete** |
 | 4 | Population stacking & explicit-value tokens | **Complete** |
 | 5 | PopulationShape redesign | **Complete** |
-| 6 | Concurrency review | Not started |
+| 6 | Concurrency review | Code complete; documentation write-up outstanding (see Next_Session.md) |
 | 7 | Peer group / reference data | Not started — scope now narrower: only `organisations.csv` storage remains; binary peer group review logic was removed as a non-issue (see Session 4). |
 | 8 | Placeholder simplification | Not started |
 | 9 | Strip module numbering from code_base | Not started |
