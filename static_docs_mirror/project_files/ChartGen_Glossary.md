@@ -16,17 +16,17 @@ chartgen/
 ├── requirements.txt
 ├── user_resources/
 └── modules/
-    ├── m01_data_acquisition/
-    ├── m02_template_reader/
-    ├── m03_running_order/
-    ├── m04_data_shapes/
-    ├── m05_chart_engine/
-    ├── m06_assembly_engine/
-    ├── m07_insert_picture/
-    ├── m08_insert_from_excel/
-    ├── m09_static_config/
-    ├── m12_local_config/
-    └── m14_workfile_file/
+    ├── data_acquisition/
+    ├── template_reader/
+    ├── running_order/
+    ├── data_shapes/
+    ├── chart_engine/
+    ├── assembly_engine/
+    ├── insert_picture/
+    ├── insert_from_excel/
+    ├── static_config/
+    ├── local_config/
+    └── workfile_file/
 
 Workfile Domain (.cgw)
 MyWorkfile.cgw  (ZIP)

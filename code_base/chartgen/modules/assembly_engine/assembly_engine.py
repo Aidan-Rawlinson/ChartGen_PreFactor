@@ -15,12 +15,12 @@ from pptx import Presentation
 from pptx.util import Emu
 from PIL import Image as PILImage
 
-from modules.m05_chart_engine.cache_reader import load_shape
-from modules.m05_chart_engine.base_charts import render_chart
-from modules.m12_local_config.local_config import ReportContext, build_report_context
-from modules.m04_data_shapes.shapes import filter_shape
-from modules.m07_insert_picture.insert_picture import insert_picture
-from modules.m08_insert_from_excel.insert_from_excel import (
+from modules.chart_engine.cache_reader import load_shape
+from modules.chart_engine.base_charts import render_chart
+from modules.local_config.local_config import ReportContext, build_report_context
+from modules.data_shapes.shapes import filter_shape
+from modules.insert_picture.insert_picture import insert_picture
+from modules.insert_from_excel.insert_from_excel import (
     open_excel, close_excel, insert_from_excel
 )
 
@@ -108,7 +108,7 @@ def build_population_shapes(data_shape, populations_str: str,
 
 def _get_shape_units(data_shape) -> list:
     """Return the flat list of units from any shape type."""
-    from modules.m04_data_shapes.shapes import (
+    from modules.data_shapes.shapes import (
         NumericSeries, NumericCompositional, CategoricalCompositional
     )
     if isinstance(data_shape, NumericSeries):

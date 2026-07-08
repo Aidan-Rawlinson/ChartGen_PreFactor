@@ -37,20 +37,20 @@ chartgen/
 ├── user_resources/
 │   └── PPT_Template_Creation.md
 └── modules/
-    ├── m01_data_acquisition/
-    ├── m02_template_reader/
-    ├── m03_running_order/
-    ├── m04_data_shapes/
-    ├── m05_chart_engine/
-    ├── m06_assembly_engine/
-    ├── m07_insert_picture/
-    ├── m08_insert_from_excel/
-    ├── m09_static_config/
+    ├── data_acquisition/
+    ├── template_reader/
+    ├── running_order/
+    ├── data_shapes/
+    ├── chart_engine/
+    ├── assembly_engine/
+    ├── insert_picture/
+    ├── insert_from_excel/
+    ├── static_config/
     │   └── chart_type_map.csv
-    ├── m12_local_config/
+    ├── local_config/
     │   ├── local_config.py
     │   └── credentials.csv
-    └── m14_workfile_file/
+    └── workfile_file/
         └── workfile_file.py
 ```
 
@@ -60,18 +60,18 @@ chartgen/
 | `run_chartgen.bat` | Double-click launcher; creates venv on first run |
 | `requirements.txt` | Python dependencies (kept in sync with `.bat`) |
 | `user_resources/PPT_Template_Creation.md` | Guidance doc for template designers |
-| `modules/m01_data_acquisition/` | Fetch → canonical data shapes (API client, transformers) |
-| `modules/m02_template_reader/` | Reads `.pptx` placeholders; detects/strips yellow boxes |
-| `modules/m03_running_order/` | Running Order schema, xlsx import/export (transient only) |
-| `modules/m04_data_shapes/` | NumericSeries / NumericCompositional / CategoricalCompositional |
-| `modules/m05_chart_engine/` | 17 Base Charts; `render_chart` dispatch |
-| `modules/m06_assembly_engine/` | Running Order executor — the only module touching `python-pptx` |
-| `modules/m07_insert_picture/` | `insert_picture` Running Order function |
-| `modules/m08_insert_from_excel/` | Excel COM capture (`open_excel` / `insert_from_excel` / `close_excel`) |
-| `modules/m09_static_config/chart_type_map.csv` | Data shape → valid chart type refs (developer-owned, read-only) |
-| `modules/m12_local_config/local_config.py` | `ReportContext` + `build_report_context()` |
-| `modules/m12_local_config/credentials.csv` | Last-used username only, rewritten every login — ★ the one genuine exception to the software/workfile split, see Decision 7 |
-| `modules/m14_workfile_file/workfile_file.py` | Owns the `.cgw` format — see Section 4. The only module that reads/writes the ZIP directly |
+| `modules/data_acquisition/` | Fetch → canonical data shapes (API client, transformers) |
+| `modules/template_reader/` | Reads `.pptx` placeholders; detects/strips yellow boxes |
+| `modules/running_order/` | Running Order schema, xlsx import/export (transient only) |
+| `modules/data_shapes/` | NumericSeries / NumericCompositional / CategoricalCompositional |
+| `modules/chart_engine/` | 17 Base Charts; `render_chart` dispatch |
+| `modules/assembly_engine/` | Running Order executor — the only module touching `python-pptx` |
+| `modules/insert_picture/` | `insert_picture` Running Order function |
+| `modules/insert_from_excel/` | Excel COM capture (`open_excel` / `insert_from_excel` / `close_excel`) |
+| `modules/static_config/chart_type_map.csv` | Data shape → valid chart type refs (developer-owned, read-only) |
+| `modules/local_config/local_config.py` | `ReportContext` + `build_report_context()` |
+| `modules/local_config/credentials.csv` | Last-used username only, rewritten every login — ★ the one genuine exception to the software/workfile split, see Decision 7 |
+| `modules/workfile_file/workfile_file.py` | Owns the `.cgw` format — see Section 4. The only module that reads/writes the ZIP directly |
 
 ---
 
@@ -225,7 +225,7 @@ ChartGen workfiles are saved as a single `.cgw` file — internally a ZIP archiv
 
 The Running Order's canonical store is `running_order.csv` inside the `.cgw` — a flat table, not xlsx. The `.xlsx` is a human-facing export/import format only, never itself stored in the workfile.
 
-All working state during a session lives in the in-memory `WorkfileState` object, not on disk (Section 5) — the same convention as Word, Excel, and PowerPoint. `WorkfileState` is owned and managed exclusively by `m14_workfile_file`; no other module touches the ZIP directly.
+All working state during a session lives in the in-memory `WorkfileState` object, not on disk (Section 5) — the same convention as Word, Excel, and PowerPoint. `WorkfileState` is owned and managed exclusively by `workfile_file`; no other module touches the ZIP directly.
 
 **Memory footprint.** All workfiles are structured text (CSV, JSON). Chart data — the largest component — runs to approximately 50–100KB per chart. A large workfile with 200 charts holds under 20MB in memory. Not a concern.
 
@@ -286,9 +286,9 @@ Buttons are active/inactive based on the state of the software.
 
 ### Decision 7 — Credentials Location
 
-Only the username is stored, in `m12_local_config/credentials.csv` — rewritten on every successful login, saving the user from re-entering it on next launch. The password and session token are never persisted to disk; the token lives only in `st.session_state["token"]` for the session's duration.
+Only the username is stored, in `local_config/credentials.csv` — rewritten on every successful login, saving the user from re-entering it on next launch. The password and session token are never persisted to disk; the token lives only in `st.session_state["token"]` for the session's duration.
 
-This is per-machine, per-user data, not workfile data, so it lives in `m12_local_config/` rather than the workfile or static config.
+This is per-machine, per-user data, not workfile data, so it lives in `local_config/` rather than the workfile or static config.
 
 ### Decision 8 — SharePoint Compatibility
 

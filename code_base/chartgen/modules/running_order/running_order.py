@@ -71,7 +71,7 @@ BATCH_FUNCTIONS      = {"open_excel", "close_excel"}
 # ---------------------------------------------------------------------------
 
 def generate_from_template(
-    template_result,          # TemplateReadResult from M02
+    template_result,          # TemplateReadResult from the Template Reader module
     manifest: dict,           # filename -> {label, shape_type, ...} from cache
 ) -> list[dict]:
     """

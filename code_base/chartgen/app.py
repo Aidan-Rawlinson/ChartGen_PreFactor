@@ -11,19 +11,19 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 import streamlit as st
 
-from modules.m01_data_acquisition.fetch import fetch_all
-from modules.m01_data_acquisition.api_client import get_token
-from modules.m05_chart_engine.cache_reader import list_cached_files, load_shape, load_manifest
-from modules.m05_chart_engine.chart_type_map import get_valid_chart_types
-from modules.m05_chart_engine.base_charts import render_chart
-from modules.m12_local_config.local_config import load_last_username, save_last_username
-from modules.m14_workfile_file.workfile_file import (
+from modules.data_acquisition.fetch import fetch_all
+from modules.data_acquisition.api_client import get_token
+from modules.chart_engine.cache_reader import list_cached_files, load_shape, load_manifest
+from modules.chart_engine.chart_type_map import get_valid_chart_types
+from modules.chart_engine.base_charts import render_chart
+from modules.local_config.local_config import load_last_username, save_last_username
+from modules.workfile_file.workfile_file import (
     WorkfileState, open_workfile, save_workfile, new_workfile, close_workfile,
     read_workfile_info, write_lock, clear_lock
 )
 
 CHART_TYPE_MAP_PATH = os.path.join(
-    os.path.dirname(__file__), "modules", "m09_static_config", "chart_type_map.csv"
+    os.path.dirname(__file__), "modules", "static_config", "chart_type_map.csv"
 )
 DEFAULT_EMAIL = "aidan.rawlinson@nhs.net"
 
@@ -268,7 +268,7 @@ def _pick_folder() -> str:
 
 
 def _show_new_workfile_form():
-    from modules.m01_data_acquisition.api_client import get_projects, get_submissions, get_organisations
+    from modules.data_acquisition.api_client import get_projects, get_submissions, get_organisations
 
     st.caption("All fields required.")
 
@@ -880,8 +880,8 @@ with tab_imports:
 
     if uploaded_template is not None:
         if st.button("Process Template"):
-            from modules.m02_template_reader.template_reader import read_template, update_urls_csv
-            from modules.m03_running_order.running_order import generate_from_template
+            from modules.template_reader.template_reader import read_template, update_urls_csv
+            from modules.running_order.running_order import generate_from_template
 
             ws_cur = _ws()
             workfile_dir = os.path.dirname(ws_cur.workfile_path)
@@ -1009,7 +1009,7 @@ with tab_text:
         "Add `update_text` rows to the Running Order to replace these text tags "
         "in your PowerPoint template at generation time."
     )
-    from modules.m12_local_config.local_config import build_report_context as _brc_text
+    from modules.local_config.local_config import build_report_context as _brc_text
     _rc_text = _brc_text(_settings(), _units())
     _preview_value = _rc_text.unit_name if _rc_text else "— no reporting unit selected —"
 
@@ -1037,7 +1037,7 @@ with tab_running_order:
         try:
             import io
             import pandas as pd
-            from modules.m03_running_order.running_order import (
+            from modules.running_order.running_order import (
                 read_xlsx, write_xlsx, COLUMNS, ALL_FUNCTIONS
             )
 
@@ -1104,7 +1104,7 @@ with tab_running_order:
                     f_chart_type = row.get("chart_type_ref", "")
 
                 if needs_populations:
-                    from modules.m12_local_config.local_config import get_peer_group_value_options
+                    from modules.local_config.local_config import get_peer_group_value_options
                     _peer_options = get_peer_group_value_options(_units())
                     _pop_options = ["All"] + _peer_options + ["Selected"]
                     current_pop_str = str(row.get("populations", "") or "")
@@ -1255,8 +1255,8 @@ with tab_charts:
 
             if selected_desc:
                 chart_ref = type_options[selected_desc]
-                from modules.m12_local_config.local_config import build_report_context
-                from modules.m06_assembly_engine.assembly_engine import build_population_shapes
+                from modules.local_config.local_config import build_report_context
+                from modules.assembly_engine.assembly_engine import build_population_shapes
                 from dataclasses import replace as _replace
 
                 _units_local = _units()
@@ -1289,7 +1289,7 @@ with tab_charts:
 
 with tab_outputs:
     import time as _time
-    from modules.m06_assembly_engine.assembly_engine import run_running_order
+    from modules.assembly_engine.assembly_engine import run_running_order
 
     _s           = _settings()
     _subs        = _units()
@@ -1334,7 +1334,7 @@ with tab_outputs:
         return [r for r in _ws().running_order_rows if r["enabled"] == 1]
 
     def _run_for_units(units_to_run: list, run_label: str):
-        from modules.m06_assembly_engine.assembly_engine import (
+        from modules.assembly_engine.assembly_engine import (
             run_running_order, AssemblyContext, FUNCTION_MAP
         )
         all_rows    = _build_rows_to_run()

@@ -261,7 +261,7 @@ def save_workfile(state: WorkfileState, username: str, target_path: str = None):
 
         # running_order — derive fieldnames from rows if present
         if state.running_order_rows:
-            from modules.m03_running_order.running_order import COLUMNS
+            from modules.running_order.running_order import COLUMNS
             _write("workfile_config/running_order.csv",
                    _rows_to_csv(state.running_order_rows, COLUMNS))
         else:

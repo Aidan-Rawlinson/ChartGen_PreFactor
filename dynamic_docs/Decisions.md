@@ -196,3 +196,14 @@
 
 **Decision:** The name-based classification bypass (`shape.name.lower().startswith("chart")`) is removed entirely. A placeholder is now recognised purely by `shape.is_placeholder` + native type membership in the whitelist — never by name.
 **Rationale:** User's explicit instruction, following the same discussion — with the whitelist widened to cover every realistic content-bearing type, the name-based escape hatch no longer serves a purpose it can't already cover by type, and its presence was itself the source of the original silent-miss risk (an unlisted type could only be rescued by naming, so an unlisted, unnamed placeholder failed invisibly). Confirmed via `running_order.py` that no other code path depends on placeholder naming for anything beyond Running Order row display, before making the change.
+
+## Session 11 — [Date not specified]
+
+**Decision:** Session 9 (module numbering strip) was executed as a pure mechanical rename — folder names stripped of `mNN_` only, no other renaming — after a full blast-radius scan (34 references, including 2 string-built paths) rather than an incremental rename-and-fix-as-you-go approach.
+**Rationale:** Scanning first isn't extra process — the scan is a prerequisite either way, since renames can't be done safely without knowing every reference. Doing it upfront in one pass avoids discovering breakages one at a time. User confirmed this approach before starting.
+
+**Decision:** Documentation updates for the module rename used simple search-replace only, with no additional review or restructuring, per explicit user instruction to keep it simple and avoid overthinking.
+**Rationale:** User instruction, citing limited remaining tokens. Only Architecture and Glossary needed changes (module tree/table); Refactoring Issues was deliberately left with the old names as a historical record.
+
+**Decision:** This session's close-down skipped testing/thinking stages and the Project Files verification step (Close-down protocol step 7), per explicit user instruction due to low remaining tokens.
+**Rationale:** User instruction. Documented here so a future session doesn't assume verification happened.

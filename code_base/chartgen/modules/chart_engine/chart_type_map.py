@@ -7,7 +7,7 @@ import csv
 import os
 
 MAP_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "m09_static_config", "chart_type_map.csv"
+    os.path.dirname(__file__), "..", "static_config", "chart_type_map.csv"
 )
 
 

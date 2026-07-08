@@ -3,7 +3,7 @@ transformers.py
 One transformation function per stored procedure group; each converts raw API JSON into a canonical data shape.
 """
 
-from modules.m04_data_shapes.shapes import (
+from modules.data_shapes.shapes import (
     NumericSeries, NumericSeriesUnit, NumericSeriesMetricStats, ShapeStats,
     NumericCompositional, NumericCompositionalMetric, NumericCompositionalUnit,
     NumericCompositionalMetricStats,

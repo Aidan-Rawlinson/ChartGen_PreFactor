@@ -18,7 +18,7 @@ import numpy as np
 
 import seaborn as sns
 
-from modules.m04_data_shapes.shapes import (
+from modules.data_shapes.shapes import (
     NumericSeries,
     NumericCompositional,
     CategoricalCompositional,
