@@ -36,7 +36,7 @@ chartgen/
 ├── requirements.txt
 ├── user_resources/
 │   └── PPT_Template_Creation.md
-└── modules/
+└── packages/
     ├── data_acquisition/
     ├── template_reader/
     ├── running_order/
@@ -60,18 +60,18 @@ chartgen/
 | `run_chartgen.bat` | Double-click launcher; creates venv on first run |
 | `requirements.txt` | Python dependencies (kept in sync with `.bat`) |
 | `user_resources/PPT_Template_Creation.md` | Guidance doc for template designers |
-| `modules/data_acquisition/` | Fetch → canonical data shapes (API client, transformers) |
-| `modules/template_reader/` | Reads `.pptx` placeholders; detects/strips yellow boxes |
-| `modules/running_order/` | Running Order schema, xlsx import/export (transient only) |
-| `modules/data_shapes/` | NumericSeries / NumericCompositional / CategoricalCompositional |
-| `modules/chart_engine/` | 17 Base Charts; `render_chart` dispatch |
-| `modules/assembly_engine/` | Running Order executor — the only module touching `python-pptx` |
-| `modules/insert_picture/` | `insert_picture` Running Order function |
-| `modules/insert_from_excel/` | Excel COM capture (`open_excel` / `insert_from_excel` / `close_excel`) |
-| `modules/static_config/chart_type_map.csv` | Data shape → valid chart type refs (developer-owned, read-only) |
-| `modules/local_config/local_config.py` | `ReportContext` + `build_report_context()` |
-| `modules/local_config/credentials.csv` | Last-used username only, rewritten every login — ★ the one genuine exception to the software/workfile split, see Decision 7 |
-| `modules/workfile_file/workfile_file.py` | Owns the `.cgw` format — see Section 4. The only module that reads/writes the ZIP directly |
+| `packages/data_acquisition/` | Fetch → canonical data shapes (API client, transformers) |
+| `packages/template_reader/` | Reads `.pptx` placeholders; detects/strips yellow boxes |
+| `packages/running_order/` | Running Order schema, xlsx import/export (transient only) |
+| `packages/data_shapes/` | NumericSeries / NumericCompositional / CategoricalCompositional |
+| `packages/chart_engine/` | 17 Base Charts; `render_chart` dispatch |
+| `packages/assembly_engine/` | Running Order executor — the only package touching `python-pptx` |
+| `packages/insert_picture/` | `insert_picture` Running Order function |
+| `packages/insert_from_excel/` | Excel COM capture (`open_excel` / `insert_from_excel` / `close_excel`) |
+| `packages/static_config/chart_type_map.csv` | Data shape → valid chart type refs (developer-owned, read-only) |
+| `packages/local_config/local_config.py` | `ReportContext` + `build_report_context()` |
+| `packages/local_config/credentials.csv` | Last-used username only, rewritten every login — ★ the one genuine exception to the software/workfile split, see Decision 7 |
+| `packages/workfile_file/workfile_file.py` | Owns the `.cgw` format — see Section 4. The only module that reads/writes the ZIP directly |
 
 ---
 
@@ -225,7 +225,7 @@ ChartGen workfiles are saved as a single `.cgw` file — internally a ZIP archiv
 
 The Running Order's canonical store is `running_order.csv` inside the `.cgw` — a flat table, not xlsx. The `.xlsx` is a human-facing export/import format only, never itself stored in the workfile.
 
-All working state during a session lives in the in-memory `WorkfileState` object, not on disk (Section 5) — the same convention as Word, Excel, and PowerPoint. `WorkfileState` is owned and managed exclusively by `workfile_file`; no other module touches the ZIP directly.
+All working state during a session lives in the in-memory `WorkfileState` object, not on disk (Section 5) — the same convention as Word, Excel, and PowerPoint. `WorkfileState` is owned and managed exclusively by `workfile_file`; no other package touches the ZIP directly.
 
 **Memory footprint.** All workfiles are structured text (CSV, JSON). Chart data — the largest component — runs to approximately 50–100KB per chart. A large workfile with 200 charts holds under 20MB in memory. Not a concern.
 
@@ -304,4 +304,4 @@ For the current phase, ChartGen lives in a folder on the C: drive under direct d
 
 ---
 
-See the refactor issues document for open items carried forward from this architecture (type coercion, multi-project support, file association, Text Engine/Batch Controller module split).
+See the refactor issues document for open items carried forward from this architecture (type coercion, multi-project support, file association, Text Engine/Batch Controller package split).

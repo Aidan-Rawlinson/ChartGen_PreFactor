@@ -4,7 +4,25 @@
 
 ---
 
-## Module Map
+## Python Terminology (General)
+
+*Standard Python packaging terminology — not specific to ChartGen. Established for use across the Project Structure Review and beyond.*
+
+| Term | Definition |
+|---|---|
+| **Package** | Any folder with `__init__.py`. |
+| **Sub-package** (also: nested package) | A package nested inside another package. |
+| **Parent package** | A package containing one or more sub-packages, relative to those sub-packages. |
+| **Top-level package** | A package that sits directly under the project root, not nested inside another. |
+| **Module** | A `.py` file. |
+| **Package data** | Non-Python files sitting inside a package. |
+| **Directory** (also: folder) | Any folder without `__init__.py`. |
+| **Codebase** | All the code that exists — the content, not its arrangement. |
+| **Project structure** (also: directory structure, folder structure, project layout) | The arrangement of packages, modules, and directories relative to each other. |
+
+---
+
+## Package Map
 
 Top-level structure only. See Architecture, Sections 3–4, for descriptions.
 
@@ -15,7 +33,7 @@ chartgen/
 ├── run_chartgen.bat
 ├── requirements.txt
 ├── user_resources/
-└── modules/
+└── packages/
     ├── data_acquisition/
     ├── template_reader/
     ├── running_order/
@@ -80,7 +98,7 @@ MyWorkfile.cgw  (ZIP)
 
 - **Read-Only** — a workfile session opened without claiming the advisory lock. Only Save is disabled; every other action behaves as in a normal session. See Functional Spec, Section 5.
 
-- **WorkfileState** — the in-memory Python object holding the complete working state of an open `.cgw`. The sole interface other modules use to read or write workfile data during a session. See the Architecture document, Section 5.
+- **WorkfileState** — the in-memory Python object holding the complete working state of an open `.cgw`. The sole interface other packages use to read or write workfile data during a session. See the Architecture document, Section 5.
 
 ### Cluster 5 — Template & placeholders
 

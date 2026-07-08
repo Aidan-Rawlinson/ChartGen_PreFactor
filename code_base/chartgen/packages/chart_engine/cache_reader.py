@@ -5,7 +5,7 @@ Loads a canonical data shape from WorkfileState's cache by filename.
 
 import json
 
-from modules.data_shapes.shapes import (
+from packages.data_shapes.shapes import (
     NumericSeries, NumericSeriesUnit, NumericSeriesMetricStats, ShapeStats,
     NumericCompositional, NumericCompositionalMetric, NumericCompositionalUnit,
     NumericCompositionalMetricStats,

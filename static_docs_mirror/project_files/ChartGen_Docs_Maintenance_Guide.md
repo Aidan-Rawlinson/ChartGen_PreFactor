@@ -29,7 +29,7 @@ If a round of code changes is finishing, or the session appears to be ending, an
 | If the change is about... | It belongs in... |
 |---|---|
 | Runtime behaviour | Functional Spec |
-| Storage, structure, module boundaries | Architecture |
+| Storage, structure, package boundaries | Architecture |
 | Scope and readiness (built / partial / not built) | Feature List |
 | Naming and taxonomy | Glossary |
 | Domain rationale, design intent | Primer |

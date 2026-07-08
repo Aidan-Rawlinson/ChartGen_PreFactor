@@ -8,7 +8,7 @@ import os
 import csv
 import json
 
-from modules.constants_temp.constants_temp import coerce_row
+from packages.constants_temp.constants_temp import coerce_row
 
 try:
     import openpyxl

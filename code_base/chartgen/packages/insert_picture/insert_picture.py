@@ -28,7 +28,7 @@ def insert_picture(ctx, row: dict, settings: dict) -> dict:
 
     Required row fields: image_path, left_emu, top_emu, width_emu, slide_index.
     """
-    from modules.assembly_engine.assembly_engine import _err, _ok
+    from packages.assembly_engine.assembly_engine import _err, _ok
 
     if ctx.prs is None:
         return _err(row, "insert_picture: no open presentation (create_ppt must run first).")

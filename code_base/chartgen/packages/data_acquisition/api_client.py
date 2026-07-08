@@ -5,7 +5,7 @@ Authentication and API calls to the NHS Benchmarking members API.
 
 import requests
 
-from modules.constants_temp.constants_temp import coerce_row
+from packages.constants_temp.constants_temp import coerce_row
 
 BASE_URL = "https://membersapi.nhsbenchmarking.nhs.uk"
 ORGANISATION_ID = 232  # Default org used to retrieve full population data

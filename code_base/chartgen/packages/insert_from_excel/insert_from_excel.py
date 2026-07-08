@@ -37,7 +37,7 @@ def open_excel(ctx, row: dict, settings: dict) -> dict:
     Open an Excel workbook via COM and hold the reference on AssemblyContext.
     Scope: batch_open — runs once at the start of a batch.
     """
-    from modules.assembly_engine.assembly_engine import _err, _ok
+    from packages.assembly_engine.assembly_engine import _err, _ok
 
     excel_path = str(row.get("excel_path", "")).strip()
     if not excel_path:
@@ -99,7 +99,7 @@ def close_excel(ctx, row: dict, settings: dict) -> dict:
 
     Scope: batch_close — runs once after the last report in a batch.
     """
-    from modules.assembly_engine.assembly_engine import _err, _ok
+    from packages.assembly_engine.assembly_engine import _err, _ok
 
     excel_path = str(row.get("excel_path", "")).strip()
     if not excel_path:
@@ -135,7 +135,7 @@ def insert_from_excel(ctx, row: dict, settings: dict) -> dict:
 
     Scope: normal — runs once per report.
     """
-    from modules.assembly_engine.assembly_engine import _err, _ok
+    from packages.assembly_engine.assembly_engine import _err, _ok
 
     if ctx.prs is None:
         return _err(row, "insert_from_excel: no open presentation "

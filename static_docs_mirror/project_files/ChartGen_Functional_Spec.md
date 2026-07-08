@@ -14,7 +14,7 @@ Covers the core report generation pipeline: data acquisition, chart construction
 
 ## 2. Design Principles
 
-- **Modular architecture** — modules interact through defined interfaces; swapping one module requires changes only within that module and its config.
+- **Package architecture** — packages interact through defined interfaces; swapping one package requires changes only within that package and its config.
 - **Stable data contracts** — the Running Order passes canonical data structures to the Chart Engine regardless of charting library; chart type refs and tweaks are the Chart Engine's concern only.
 - **Normalisation of chart data** — raw API data is normalised into one of three canonical shapes before any chart, table, or text function touches it. Chart type validity is enforced at authoring time.
 - **PowerPoint is just the output format** — the system produces `.pptx`/`.pdf`; it does not distinguish use cases at output time.

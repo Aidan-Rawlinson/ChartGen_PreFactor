@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
-from modules.constants_temp.constants_temp import coerce_row
+from packages.constants_temp.constants_temp import coerce_row
 
 CHARTGEN_VERSION = "0.1-prototype"
 
@@ -243,7 +243,7 @@ def save_workfile(state: WorkfileState, username: str, target_path: str = None):
     Serialise WorkfileState back to the .cgw ZIP, updating last_saved_by/at but not lock fields.
     target_path overrides state.workfile_path (used by Save As).
     """
-    from modules.constants_temp.constants_temp import UNITS_FIELDNAMES as UNIT_FIELDS
+    from packages.constants_temp.constants_temp import UNITS_FIELDNAMES as UNIT_FIELDS
 
     now = datetime.now(timezone.utc).isoformat()
     state.last_saved_by = username
@@ -263,7 +263,7 @@ def save_workfile(state: WorkfileState, username: str, target_path: str = None):
 
         # running_order — derive fieldnames from rows if present
         if state.running_order_rows:
-            from modules.running_order.running_order import COLUMNS
+            from packages.running_order.running_order import COLUMNS
             _write("workfile_config/running_order.csv",
                    _rows_to_csv(state.running_order_rows, COLUMNS))
         else:
