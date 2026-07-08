@@ -45,7 +45,7 @@ def build_population_shapes(data_shape, populations_str: str,
 
     unit_lookup = {r["unit_id"]: r for r in units}
     selected_id = report_context.unit_id if report_context else None
-    selected_org_id = str(report_context.organisation_id) if report_context else None
+    selected_org_id = report_context.organisation_id if report_context else None
 
     def _resolve(token: str, scope_ids: set):
         """Resolve one token to (unit_ids, label) within scope_ids, or None."""
@@ -57,7 +57,7 @@ def build_population_shapes(data_shape, populations_str: str,
                 return None
             ids = {
                 r["unit_id"] for r in units
-                if str(r["organisation_id"]) == selected_org_id
+                if r["organisation_id"] == selected_org_id
                 and r["unit_id"] in scope_ids
             }
             return ids, "Selected"

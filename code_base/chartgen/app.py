@@ -364,11 +364,11 @@ def _show_new_workfile_form():
 
         # Organisation data is fetched only to resolve Region() onto units —
         # the lookup is used once, in memory, and not retained beyond this.
-        org_lookup = {str(r["organisation_id"]): r for r in org_rows}
+        org_lookup = {r["organisation_id"]: r for r in org_rows}
         rows_out = []
         for row in submission_rows:
             services = row.get("services", [])
-            org = org_lookup.get(str(row["organisation_id"]), {})
+            org = org_lookup.get(row["organisation_id"], {})
             rows_out.append({
                 "unit_id":                  row["submission_id"],
                 "unit_code":                row["submission_code"],

@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
+from modules.constants_temp.constants_temp import coerce_row
 
 CHARTGEN_VERSION = "0.1-prototype"
 
@@ -149,7 +150,8 @@ def open_workfile(workfile_path: str) -> WorkfileState:
         state.units            = _csv_to_rows(_read("workfile_config/units.csv"))
         state.running_order_rows = _csv_to_rows(_read("workfile_config/running_order.csv"))
         for _row in state.running_order_rows:
-            _row["enabled"] = 1 if str(_row.get("enabled", "1")).strip() in ("1", "True", "true", "yes") else 0
+            _row.setdefault("enabled", "1")
+            coerce_row(_row)
 
         # data_cache/
         if "data_cache/manifest.json" in names:

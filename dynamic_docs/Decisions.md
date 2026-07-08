@@ -207,3 +207,11 @@
 
 **Decision:** This session's close-down skipped testing/thinking stages and the Project Files verification step (Close-down protocol step 7), per explicit user instruction due to low remaining tokens.
 **Rationale:** User instruction. Documented here so a future session doesn't assume verification happened.
+
+
+## Session — 2026-07-08
+
+- Pruned three Part 2 Refactoring Issues items (beforeunload warning, autosave/checkpoint mechanisms, advisory-lock re-check gap) — no longer worth tracking.
+- Decided to pull the Part 2 "type coercion at the CSV/WorkfileState boundary" item into pre-factor as a deliberate, one-off exception to the otherwise strict Part 1/Part 2 boundary, rather than leaving it for the main refactor or opening it as a formal Part 1 session.
+- Decided the coercion fix should be a shared `FIELD_TYPES` table + one `coerce_row()` function, applied at the true point of origin (the API boundary in `api_client.py`) rather than typed dataclasses — dataclasses remain a separate, larger Part 2 question (untyped dicts item), not folded into this fix.
+- Decided not to add coercion at the settings.csv boundary despite it being named in the original proposal — inspection showed no actual type inconsistency there (`batch_cursor`'s existing single cast site already works), and adding a no-op call would add complexity without fixing anything.

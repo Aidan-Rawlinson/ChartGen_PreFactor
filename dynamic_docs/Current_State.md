@@ -1,18 +1,21 @@
 <!-- Purpose: A snapshot of where the project stands right now -- what works, what is in progress, what is broken. Rewritten by Claude each session. -->
 
-## Status: Refactoring Issues Session 9 complete — module numbering stripped from code_base. Part 1 fully worked through.
+## Status: Part 1 remains fully complete (Sessions 1–10). This session worked on Part 2 (main refactor) items — one pruned, one pulled forward and implemented as an agreed exception.
 
-Renamed all module folders under `modules/` to drop the `mNN_` prefix (e.g. `m01_data_acquisition` → `data_acquisition`). Full blast-radius scan performed first (34 cross-module references across `app.py` and 9 module files, including two string-built paths to `static_config/chart_type_map.csv`) — all updated to match. One cosmetic "from M02" comment in `running_order.py` also corrected. Old `mNN_` folders and stale `__pycache__` deleted.
+**Refactoring Issues log pruned.** Three Part 2 items removed at user request as no longer worth tracking: the `beforeunload` browser warning, autosave/checkpoint mechanisms, and the advisory-lock re-check-at-Save gap.
 
-Documentation side done per user instruction to keep it simple (search-replace only): Architecture.md and Glossary.md module trees/tables updated to the new names — the only two reference docs containing `mNN_` references. Functional Spec, Feature List, and Primer had none. Refactoring Issues intentionally left with original `mNN_` names, since it's a historical log, not current-state documentation.
+**Type coercion (Part 2 item) pulled into pre-factor and resolved.** Normally structural Part 2 items stay deferred to the main refactor, but this one was explicitly pulled forward as a one-off exception. Implemented as a shared `FIELD_TYPES` table plus a single `coerce_row()` function in `constants_temp.py` — not typed dataclasses, which remains a separate, larger Part 2 question. Changes:
+- `api_client.py`'s `get_submissions()`/`get_organisations()` now coerce every returned row, so `organisation_id` (and `submission_id`) become strings at their true point of origin — the same treatment `submission_id` already had from Session 4, now table-driven instead of a bespoke ternary.
+- The two ad hoc `enabled` truthy-parsers (`workfile_file.py` on `.cgw` open, `running_order.py` on `.xlsx` upload) both now call the shared function.
+- Four now-redundant defensive `str()` wraps around `organisation_id` comparisons removed from `app.py` and `assembly_engine.py`.
+- `Refactoring_issues_known.md` Part 2 entry marked Done in place (strikethrough retained), noting it was a pre-factor exception rather than a Part 1 session.
 
 ## Planned session breakdown (ChartGen_PreFactor scope)
 
 | Session | Focus | Status |
 |---|---|---|
-| 1–8, 10 | (see prior entries) | **Complete** |
-| 9 | Strip module numbering from code_base | **Complete** |
+| 1–10 | (see prior entries) | **Complete** |
 
-All of Part 1 (Refactoring Issues sessions run within this project) is now complete. Remaining work is Part 2 items, deferred to the main refactor — see `Refactoring_issues_known.md`.
+Part 1 is fully complete. Remaining work is Part 2 items, deferred to the main refactor except where explicitly pulled forward (as above) — see `Refactoring_issues_known.md`.
 
-**Git:** Not yet committed this session — close-down commit pending (this session).
+**Git:** Not committed yet this session — close-down commit pending. Note: the previous session's close-down also shows an unclear result — `git_log.txt` records a `[FAILED]` on `git commit` immediately followed by an `[OK]` on `git push`, from 2026-07-08 14:29. Per standing practice this tool's failure report isn't always reliable; verify actual repository state independently if it matters before relying on history from that point.

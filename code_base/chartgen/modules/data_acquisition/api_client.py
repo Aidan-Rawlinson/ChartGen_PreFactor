@@ -5,6 +5,7 @@ Authentication and API calls to the NHS Benchmarking members API.
 
 import requests
 
+from modules.constants_temp.constants_temp import coerce_row
 
 BASE_URL = "https://membersapi.nhsbenchmarking.nhs.uk"
 ORGANISATION_ID = 232  # Default org used to retrieve full population data
@@ -79,7 +80,7 @@ def get_submissions(project_id: int, year: int, token: str, include_org_level: b
                 })
 
         rows.append({
-            "submission_id": str(s.get("submissionId", "") if s.get("submissionId") is not None else ""),
+            "submission_id": s.get("submissionId", ""),
             "submission_code": s.get("submissionCode", ""),
             "submission_name": s.get("submissionName", ""),
             "submission_year": s.get("submissionYear", ""),
@@ -93,7 +94,7 @@ def get_submissions(project_id: int, year: int, token: str, include_org_level: b
             "services": services,
         })
 
-    return rows
+    return [coerce_row(r) for r in rows]
 
 
 VALID_ORG_TYPE_IDS = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 21, 26}
@@ -124,7 +125,7 @@ def get_organisations(year: int, token: str) -> list:
             "organisation_type_name": org.get("organisationTypeName", "") or "",
             "region_name":            org.get("regionName", "") or "",
         })
-    return rows
+    return [coerce_row(r) for r in rows]
 
 
 def get_chart_data(

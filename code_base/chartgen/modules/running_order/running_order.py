@@ -8,6 +8,8 @@ import os
 import csv
 import json
 
+from modules.constants_temp.constants_temp import coerce_row
+
 try:
     import openpyxl
     from openpyxl.styles import (
@@ -453,9 +455,8 @@ def read_xlsx(path: str) -> list[dict]:
         if not any(v is not None for v in row):
             continue  # skip empty rows
         row_dict = {col: (row[i] if i < len(row) else "") for i, col in enumerate(COLUMNS)}
-        # Normalise enabled flag
-        enabled = str(row_dict.get("enabled", "1")).strip()
-        row_dict["enabled"] = 1 if enabled in ("1", "True", "true", "yes") else 0
+        row_dict.setdefault("enabled", "1")
+        coerce_row(row_dict)
         # Normalise scope — default to "normal" if blank or missing
         scope = str(row_dict.get("scope", "")).strip()
         if scope not in SCOPE_VALUES:

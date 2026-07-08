@@ -133,3 +133,19 @@ Recreated every module folder under its stripped name (`data_acquisition`, `temp
 Documentation side done per explicit instruction to keep it simple (search-replace only, no over-thinking): checked all five current-state reference docs and found `mNN_` references only in Architecture's and Glossary's module trees/tables — both updated. Functional Spec, Feature List, and Primer had none. Refactoring Issues deliberately left with the old `mNN_` names, since it's a historical log of decisions as they were made, not current-state documentation. User re-uploaded Project Files; verification step skipped this session per user instruction (running low on tokens).
 
 Close-down run with testing/thinking stages skipped per user instruction. Progression_Log and Decisions entries kept short for the same reason.
+
+
+## Session — 2026-07-08 (Part 2 pruning + type coercion exception)
+
+Two pieces of work, both on the Refactoring Issues log rather than a numbered Part 1 session:
+
+1. Pruned three stale Part 2 items at user request: the `beforeunload` browser warning, autosave/checkpoint mechanisms, and the advisory-lock re-check-at-Save gap. Removed outright (not struck through), since they were never actioned.
+
+2. Discussed simplification options for the Part 2 "type coercion at the CSV/WorkfileState boundary" item, proposed a shared `FIELD_TYPES` table + `coerce_row()` function (deliberately not a move to typed dataclasses, which is a separate, larger question). Flagged that this item belongs to the main refactor, not pre-factor — user confirmed pulling it into pre-factor anyway as a deliberate exception. Implemented:
+   - `constants_temp.py` — added `FIELD_TYPES` and `coerce_row()`.
+   - `api_client.py` — `get_submissions()`/`get_organisations()` now coerce every row before returning, fixing `organisation_id` at its true point of origin (same treatment `submission_id` already had); replaced the old bespoke ternary.
+   - `workfile_file.py` (`.cgw` open) and `running_order.py` (`.xlsx` upload) — both ad hoc `enabled` truthy-parsers replaced with calls to the shared function.
+   - `app.py` and `assembly_engine.py` — four now-redundant defensive `str()` wraps around `organisation_id` comparisons removed.
+   - `Refactoring_issues_known.md` Part 2 entry marked Done in place (strikethrough retained), with a note that it was resolved as a pre-factor exception.
+
+Settings.csv was considered as a third coercion boundary (per the original proposal) but on inspection had no actual type inconsistency to fix (`batch_cursor`'s single cast site already worked) — left alone rather than adding a no-op call, per "don't move in the opposite direction."
